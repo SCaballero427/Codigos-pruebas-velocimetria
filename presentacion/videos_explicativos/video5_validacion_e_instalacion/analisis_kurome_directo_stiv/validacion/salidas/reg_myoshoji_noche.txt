@@ -1,0 +1,5 @@
+  myoshoji_noche_90s.mp4: 30.00 fps, DS 20.0 mm = 0.65 px/muestra (mediana), 450 muestras por linea, filas por escala [150, 225, 120]
+  modo noche (saturacion 0.0)
+  2700 fotogramas, 80 medidas en 74 s
+myoshoji_noche: -- -- -- -- -- -- -- -- --
+   aceptadas 0 de 720 (motas 0), mediana +nan

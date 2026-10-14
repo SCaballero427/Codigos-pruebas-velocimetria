@@ -1,0 +1,46 @@
+# Basura que Python, Jupyter y el sistema regeneran solos
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+Thumbs.db
+desktop.ini
+~$*
+
+# Entornos de Python: se rehacen con requirements_pyorc.txt o con arrancar.bat
+entorno_pyorc/
+.venv/
+
+# Datasets descargados (46 GB): ver datos/externos/LEEME.md
+/datos/externos/*
+!/datos/externos/LEEME.md
+
+# Grabaciones FFV1 de los directos (1-4 GB cada una, por encima del limite de GitHub)
+/casos/09_directo_tokio/validacion/grabaciones/
+/casos/09_directo_tokio/verificacion_nivel/grabaciones/
+
+# Llave SSH de prueba del banco Docker (la recrea probar_en_docker.ps1)
+.llave/
+
+# Cookies de YouTube (credenciales de sesion): nunca al repositorio
+cookies*.txt
+
+# Videos: los de resultados y los de entrada grandes se comparten aparte, no en git. Se quedan solo
+# las entradas pequenas que hacen falta para ejecutar los casos
+*.mp4
+*.avi
+*.mkv
+*.gif
+!/datos/ngwerere/ngwerere_20191103.mp4
+!/datos/canal_riego/*.mp4
+!/casos/09_directo_tokio/raspberry/prueba/*.mp4
+
+# Clon de la libreria pyorc: es otro repositorio (https://github.com/localdevices/pyorc), ver referencias/LEEME.md
+/referencias/pyorc_repo/
+
+# Binarios de RIVeR (se descargan con la aplicacion) y restos de pruebas
+/pendientes/RIVeR-STIV_1.0/*.exe
+/archivo/*.npy
+
+# Fotogramas extraidos del video para RIVeR (se regeneran desde el video; los resultados .txt si van)
+/casos/02_smc_pyorc/entradas/**/SMC_estabilizado_previsualizacion_*.jpg
+/pendientes/RIVeR-STIV_1.0/RIVeR_Example/GOPR3225_Trim_*.jpg

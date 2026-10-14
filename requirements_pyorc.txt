@@ -1,0 +1,26 @@
+# Entorno de los notebooks y scripts de casos/01 a 08, herramientas/ y tutoriales/ (Python 3.11).
+# Versiones tomadas del pyorc_env original. pyorc 0.9.8 es una version antigua sobre un stack nuevo:
+# algunas rarezas documentadas en los notebooks (ventana PIV par, escritor H.264) vienen de ahi.
+# El programa en directo (casos/09_directo_tokio) tiene su propio requirements.txt, mas ligero.
+pyopenrivercam==0.9.8
+ffpiv==0.2.1
+opencv-python==4.13.0.92
+numpy==2.4.6
+pandas==3.0.3
+scipy==1.17.1
+xarray==2026.7.0
+dask==2026.7.0
+matplotlib==3.11.0
+netcdf4==1.7.4
+geopandas==1.1.4
+shapely==2.1.2
+pyproj==3.7.2
+rasterio==1.3.11
+cartopy==0.25.0
+pillow==12.3.0
+openpyxl==3.1.5
+psutil==7.2.2
+tqdm==4.68.4
+jupyterlab==4.6.1
+notebook==7.6.0
+ipykernel==7.3.0
