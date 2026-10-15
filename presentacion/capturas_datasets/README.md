@@ -13,6 +13,7 @@ de cada uno**, en JPEG reducido: **17 MB en total**.
 | `indice_videos.csv` | Por video: ruta, resolucion, fps, fotogramas, duracion, tamano y que fotograma se capturo |
 | `resultados/` | Fotogramas de los videos de resultado y las figuras de cada caso, 1280 px |
 | `resultados/validacion_directo/` | Una medida del programa en directo sobre cada video con referencia, mas su salida de texto |
+| `resultados/directo_tokio_noche/` | El programa en directo de noche en Myoshoji (Tokio), y el diagnostico dia/noche |
 | `generar_capturas.py` | El script que lo rehace todo |
 
 Dos avisos para leer las imagenes:
@@ -71,6 +72,25 @@ cada caso.
 
 ![Heiskanen 13:03](resultados/validacion_directo/heiskanen_13-03-04.jpg)
 
+### Programa en directo de noche (`resultados/directo_tokio_noche/`)
+
+Myoshoji (Tokio) de noche, con el mismo codigo del programa y la medida del medio de cada grabacion. Es la
+unica camara con noche grabada: las grabaciones de Kurome y Shimoda son de dia. **De noche esta camara no
+mide bien**, y eso es lo que muestran: con farolas solo se ven destellos sobre ondulaciones casi quietas, que
+dan ~0.06 m/s cuando el aforo oficial del puente Ochiai y el dia con el mismo nivel dan 0.4-0.6 m/s
+(`casos/09_directo_tokio/verificacion_nivel/README.md`). Por eso el programa la dibuja pero no acepta ninguna
+estacion (`noche_no_valida`).
+
+| Imagen | Que es |
+|---|---|
+| [`myoshoji_20261014_1817JST.jpg`](resultados/directo_tokio_noche/myoshoji_20261014_1817JST.jpg) | Grabacion del directo del 14-10-2026 a las 18:17 hora de Japon, programa tal cual: 0 de 9 estaciones |
+| [`myoshoji_20261014_1817JST_forzado.jpg`](resultados/directo_tokio_noche/myoshoji_20261014_1817JST_forzado.jpg) | Lo mismo forzando `medir_noche`: 3 de 9 a 0.07 m/s. **No es una medida valida**, es lo que mediria sin el bloqueo |
+| [`myoshoji_noche_clip90s.jpg`](resultados/directo_tokio_noche/myoshoji_noche_clip90s.jpg) | El clip de prueba de la Raspberry (gris y recortado a la zona de las lineas): 0 de 9 |
+| `sti_largo_dia_1542.jpg`, `sti_largo_noche_1800.jpg` | STI de 60 s de las tres bandas, de dia (15:42) y de noche (18:00). Lineas de referencia: naranja = 0.48 m/s, azul = 0.07 m/s. De dia las estelas siguen la naranja; de noche, la azul |
+| `trazas_dia_1542.jpg`, `trazas_noche_1800.jpg` | 10 s de motas acumuladas en la planta, de azul (principio) a rojo (final), reticula de 1 m |
+
+![Myoshoji de noche](resultados/directo_tokio_noche/myoshoji_20261014_1817JST.jpg)
+
 ### Casos con notebook
 
 | Caso | Que es | Resultado | Imagenes |
@@ -96,6 +116,7 @@ Desde esta carpeta, con el `.venv` del programa en directo (solo numpy y OpenCV)
 ..\analisis_kurome_directo_stiv\.venv\Scripts\python.exe generar_capturas.py videos       # ~10 min, lee los 202 videos
 ..\analisis_kurome_directo_stiv\.venv\Scripts\python.exe generar_capturas.py resultados   # ~1 min
 ..\analisis_kurome_directo_stiv\.venv\Scripts\python.exe generar_capturas.py validacion   # ~5 min
+..\analisis_kurome_directo_stiv\.venv\Scripts\python.exe generar_capturas.py noche        # ~2 min, necesita las .ts de verificacion_nivel/grabaciones/
 ```
 
 `validacion` vuelve a correr `validacion/caso_sile.py`, `caso_bradano.py` y `caso_heiskanen.py` sin

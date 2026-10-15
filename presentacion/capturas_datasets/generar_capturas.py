@@ -2,11 +2,12 @@
 
 Los videos del dataset (`datasets vision velocimetria/`, 45 GB) y los videos de resultados no caben en
 el repositorio de forma razonable; esta carpeta guarda en su lugar una imagen de cada uno, en JPEG
-reducido. Tres partes, cada una se puede rehacer por separado:
+reducido. Cuatro partes, cada una se puede rehacer por separado:
 
     python generar_capturas.py videos       # un fotograma de cada video del dataset + hojas de contacto
     python generar_capturas.py resultados   # fotogramas de los mp4 de resultado + figuras de cada caso
     python generar_capturas.py validacion   # re-corre validacion/caso_*.py y dibuja una medida
+    python generar_capturas.py noche        # el programa en directo sobre grabaciones de noche de Japon
 
 Se ejecuta desde esta carpeta con el .venv del programa en directo (numpy + OpenCV, sin pyorc):
 
@@ -193,6 +194,23 @@ def capturas_resultados():
 
 
 # ───────────────────────────── 3. validacion del programa en directo ─────────────────────────────
+def con_franja(img, video, modo_act, i, n, t, res, extra=None):
+    """La cabecera de dibujar() esta pensada para la pantalla: en un 4K reducido no se lee, asi que se
+    repite lo esencial en una franja propia, a tamano legible. `extra`: lineas que se anaden debajo."""
+    k = LADO_VALIDACION / img.shape[1]
+    img = cv2.resize(img, (LADO_VALIDACION, round(img.shape[0] * k)), interpolation=cv2.INTER_AREA)
+    ac = [r["v"] for r in res if r["aceptada"]]
+    textos = [f"{os.path.basename(video)}  |  stiv_directo.py, modo {modo_act}  |  medida {i + 1} de "
+              f"{n} (la del medio), t = {t:.0f} s",
+              f"estaciones aceptadas {len(ac)} de {len(res)}  |  mediana de la seccion "
+              + (f"{np.median(ac):.3f} m/s" if ac else "--") + "  |  verde = aceptada, rojo = rechazada"]
+    textos += extra or []
+    franja = np.full((6 + 26 * len(textos), img.shape[1], 3), 20, np.uint8)
+    for j, tx in enumerate(textos):
+        cv2.putText(franja, tx, (10, 22 + 26 * j), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (255, 255, 255), 1, cv2.LINE_AA)
+    return np.vstack([img, franja])
+
+
 def capturas_validacion():
     """Los caso_*.py de validacion/ solo dejan texto y JSON. Se re-corren tal cual (mismo codigo, misma
     referencia) interceptando sd.medir para quedarse con el fotograma de cada medida, y se dibuja la
@@ -227,19 +245,7 @@ def capturas_validacion():
                                              "llenado": 1.0, "retraso": 0.0, "modo": modo_act,
                                              "px_muestra": g.px_por_muestra, "verificada": True}, False)
             nombre = estado["caso"] + ("_" + video.split("_")[-2] if estado["caso"] == "heiskanen" else "")
-            # la cabecera de dibujar() esta pensada para la pantalla: en un 4K reducido no se lee, asi
-            # que se repite lo esencial en una franja propia, a tamano legible
-            k = LADO_VALIDACION / img.shape[1]
-            img = cv2.resize(img, (LADO_VALIDACION, round(img.shape[0] * k)), interpolation=cv2.INTER_AREA)
-            ac = [r["v"] for r in res if r["aceptada"]]
-            textos = [f"{os.path.basename(video)}  |  stiv_directo.py, modo {modo_act}  |  medida {i + 1} de "
-                      f"{len(estado['medidas'])} (la del medio), t = {t:.0f} s",
-                      f"estaciones aceptadas {len(ac)} de {len(res)}  |  mediana de la seccion "
-                      + (f"{np.median(ac):.3f} m/s" if ac else "--") + "  |  verde = aceptada, rojo = rechazada"]
-            franja = np.full((58, img.shape[1], 3), 20, np.uint8)
-            for j, tx in enumerate(textos):
-                cv2.putText(franja, tx, (10, 22 + 26 * j), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (255, 255, 255), 1, cv2.LINE_AA)
-            img = np.vstack([img, franja])
+            img = con_franja(img, video, modo_act, i, len(estado["medidas"]), t, res)
             guardar_jpg(os.path.join(AQUI, "resultados", "validacion_directo", nombre + ".jpg"), img, LADO_VALIDACION)
             print(f"  -> captura {nombre}.jpg (medida {i + 1} de {len(estado['medidas'])}, t = {t:.0f} s)")
         return geom, med
@@ -262,7 +268,84 @@ def capturas_validacion():
     shutil.rmtree(temporal)       # los JSON re-escritos ya estan en validacion/salidas: no se guardan dos veces
 
 
+# ───────────────────────────── 4. el programa en directo de noche (Japon) ─────────────────────────
+DIRECTO = os.path.join(RAIZ, "casos", "09_directo_tokio")
+GRAB_NIVEL = os.path.join(DIRECTO, "verificacion_nivel", "grabaciones")
+AVISO_PROGRAMA = "Programa actual: en Myoshoji de noche se mide y se dibuja, pero no se acepta ninguna estacion (noche_no_valida)"
+AVISO_FORZADO = ["FORZADO (medir_noche = True), solo para ver que mide: ~0.06 m/s son destellos de farola sobre ondulaciones",
+                 "casi quietas. Refutado por el aforo oficial (0.4-0.6 m/s) y por el dia con el mismo nivel (0.48 m/s)"]
+# (nombre de la captura, video, ajustes de la camara, segundos a medir, lineas extra de la franja). Las .ts
+# de verificacion_nivel/grabaciones/ estan fuera de git (se rehacen con grabar_directo.py); el clip de
+# raspberry/prueba/ si esta
+NOCHE = [
+    ("myoshoji_noche_clip90s", os.path.join(DIRECTO, "raspberry", "prueba", "myoshoji_noche_90s.mp4"),
+     None, None, [AVISO_PROGRAMA]),
+    ("myoshoji_20261014_1817JST", os.path.join(GRAB_NIVEL, "myoshoji_20261014_1817JST.ts"),
+     None, 180, ["Grabacion del directo del 14-10-2026, 18:17-18:20 hora de Japon (noche, camara en color con farolas)",
+                 AVISO_PROGRAMA]),
+    ("myoshoji_20261014_1817JST_forzado", os.path.join(GRAB_NIVEL, "myoshoji_20261014_1817JST.ts"),
+     {"medir_noche": True}, 180,
+     ["Grabacion del directo del 14-10-2026, 18:17-18:20 hora de Japon (noche, camara en color con farolas)"]
+     + AVISO_FORZADO),
+]
+# figuras del diagnostico dia/noche ya guardadas en verificacion_nivel/salidas/diagnostico/
+FIGURAS_NOCHE = ["sti_largo_dia_1542", "sti_largo_noche_1800", "trazas_dia_1542", "trazas_noche_1800"]
+
+
+def capturas_noche():
+    """Myoshoji de noche con el codigo del programa (validacion/correr.py), dibujando la medida del
+    MEDIO con dibujar() del propio programa, como en la parte 3. Solo hay noche de Myoshoji: las
+    grabaciones de Kurome y Shimoda son de dia."""
+    sys.path.insert(0, VALIDACION)
+    import correr as C
+    sd = C.sd
+    medir_original, procesar_original = sd.medir, sd.Geometria.procesar
+    estado = {"frame": None, "medidas": []}
+
+    def procesar(self, frame, modo="dia"):
+        estado["frame"] = frame
+        return procesar_original(self, frame, modo)
+
+    def medir(*a, **k):
+        res = medir_original(*a, **k)
+        ok, jpg = cv2.imencode(".jpg", estado["frame"], [cv2.IMWRITE_JPEG_QUALITY, 95])
+        estado["medidas"].append((jpg, a[1], [dict(r) for r in res], a[3] if len(a) > 3 else k.get("modo", "dia")))
+        return res
+
+    sd.medir, sd.Geometria.procesar = medir, procesar
+    destino = os.path.join(AQUI, "resultados", "directo_tokio_noche")
+    try:
+        for nombre, video, ajustes, fin_s, extra in NOCHE:
+            if not os.path.exists(video):
+                print(f"  FALTA {video} (fuera de git: grabar_directo.py)")
+                continue
+            print(f"== {nombre}")
+            estado["medidas"] = []
+            geom, med = C.correr_camara(video, "myoshoji", "auto", fin_s, ajustes=ajustes)
+            if not estado["medidas"]:
+                print("  sin medidas")
+                continue
+            i = len(estado["medidas"]) // 2
+            jpg, g, res, modo_act = estado["medidas"][i]
+            t = med[i][0] if i < len(med) else 0.0
+            cfg = sd.cargar_config()
+            img = sd.dibujar(cv2.imdecode(jpg, cv2.IMREAD_COLOR), g, res,
+                             {"titulo": f"Myoshoji de noche: {os.path.basename(video)}", "t": t, "llenado": 1.0,
+                              "retraso": 0.0, "modo": modo_act, "px_muestra": g.px_por_muestra,
+                              "verificada": bool(cfg.get("escala_verificada"))}, False)
+            img = con_franja(img, video, modo_act, i, len(estado["medidas"]), t, res, extra)
+            guardar_jpg(os.path.join(destino, nombre + ".jpg"), img, LADO_VALIDACION)
+            print(f"  -> {nombre}.jpg (medida {i + 1} de {len(estado['medidas'])}, t = {t:.0f} s)")
+    finally:
+        sd.medir, sd.Geometria.procesar = medir_original, procesar_original
+    diag = os.path.join(DIRECTO, "verificacion_nivel", "salidas", "diagnostico")
+    for fig in FIGURAS_NOCHE:
+        guardar_jpg(os.path.join(destino, fig + ".jpg"), leer_imagen(os.path.join(diag, fig + ".png")), LADO_RESULTADO)
+        print(f"  figura {fig}")
+
+
 if __name__ == "__main__":
-    partes = {"videos": capturas_videos, "resultados": capturas_resultados, "validacion": capturas_validacion}
+    partes = {"videos": capturas_videos, "resultados": capturas_resultados, "validacion": capturas_validacion,
+              "noche": capturas_noche}
     for p in sys.argv[1:] or list(partes):
         partes[p]()
