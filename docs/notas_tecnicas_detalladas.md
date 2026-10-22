@@ -1400,6 +1400,22 @@ and **re-anchors** the clock so t keeps growing; and the 600-frame queue peaking
 **Not tested**: real Pi 4 speed (emulation says nothing), `journalctl`/`vcgencmd`, mDNS, `sudo`
 password over `ssh -t`, `-ConfigurarLlave`, a real Hikvision.
 
+**Web viewer (2026-10-22).** `--web PUERTO` starts a stdlib `ThreadingHTTPServer` (`VisorWeb`): `/`
+an inline page, `/video` MJPEG of the same `dibujar()` composite (scaled to 1600 px wide, JPEG 70, a
+performance strip appended), `/foto.jpg`, `/metricas` JSON (NaN -> null via `_json_limpio`, the
+browser's JSON.parse rejects NaN). The composite is only drawn at `--web-fps` (5) while an MJPEG
+client is connected, otherwise every 5 s, so an unwatched Pi pays nothing. `Recursos` reads
+`/proc/stat`, `/proc/self/{stat,status}`, `/proc/meminfo`, thermal_zone0, cpufreq and
+`vcgencmd get_throttled` (every 10 s) on Linux, psutil if present elsewhere. `--tiempo-real` paces a
+file to its PTS in `--sin-ventana` (before, headless always ran flat out) and `--bucle` restarts it as
+a `"corte"` (STI cleared, clock re-anchored; `Lector.vueltas`). With a paced file the frame queue is
+**30, not 150**: the reader runs ahead and kept 150 frames resident for nothing (process 667 -> 353 MB
+on the PC). `stiv.conf.ejemplo` now runs the day clip paced, looped, with `--web 8080`, so the Pi shows
+the live view as soon as it boots; `stiv.sh directo|directo-noche|web`. Checked on the PC (isolated
+copy, so no rows reached `salidas/myoshoji/`): 50.0 s of flow in 50.0 s of clock, 3.4 ms/frame, 89 ms
+per measurement, MJPEG ~4.5 img/s, page rendered by headless Edge with every card and 9 station rows.
+Not yet run on the Pi.
+
 That test bench is kept, reproducible, in **`pruebas_docker/`** (deliberately *outside* `raspberry/`,
 whose contents all ship to the Pi): `pi_falsa/Dockerfile` (Debian 13 arm64, systemd, dbus, sshd,
 user `stiv` with passwordless sudo), `docker-compose.yml` (`stiv-pi-falsa` on `localhost:2222`,

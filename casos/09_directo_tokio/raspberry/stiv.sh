@@ -17,6 +17,10 @@ Uso: ./raspberry/stiv.sh <orden>
                    Pi da abasto; n = vueltas seguidas (1), para ver si se calienta. Para el servicio.
   prueba-noche     lo mismo con el video de noche (modo noche, escalas lentas: tarda mas)
   prueba-conf [s]  ejecuta s segundos (60 por defecto) con lo que diga stiv.conf (camara/YouTube)
+  directo          el video de prueba a velocidad real y en bucle, con el visor web en el puerto 8080:
+                   se mira desde el navegador del PC (Ctrl+C para terminar). Para el servicio.
+  directo-noche    lo mismo con el video de noche
+  web              la direccion para ver en el navegador lo que esta midiendo el servicio
   activar          arranque automatico en cada encendido, y lo arranca ya
   desactivar       quita el arranque automatico y lo para
   arrancar | parar | reiniciar    (reiniciar: tras cambiar el codigo o stiv.conf)
@@ -35,6 +39,14 @@ parar_si_activo() {
         echo "(se para el servicio durante la prueba; para volver a ponerlo en marcha: ./raspberry/stiv.sh arrancar)"
         sudo systemctl stop stiv
     fi
+}
+
+direccion_web() {
+    local puerto="${1:-8080}"
+    echo "  http://$(hostname).local:$puerto"
+    for ip in $(hostname -I 2>/dev/null); do
+        case "$ip" in *:*) ;; *) echo "  http://$ip:$puerto" ;; esac
+    done
 }
 
 temperatura() {
@@ -82,6 +94,26 @@ EOF
         set -a; . "$CONF"; set +a
         # shellcheck disable=SC2086  # STIV_ARGS se parte en palabras a proposito
         "$PY" stiv_directo.py --sin-ventana $STIV_ARGS --duracion "${2:-60}" 2>&1 | grep -v '^\[h264'
+        ;;
+    directo|directo-noche)
+        if [ "$orden" = directo ]; then clip="$CLIP"; modo=dia; else clip="$CLIP_NOCHE"; modo=auto; fi
+        [ -f "$clip" ] || { echo "falta $clip"; exit 1; }
+        parar_si_activo
+        echo "Abre en el navegador del PC (misma red):"
+        direccion_web 8080
+        echo "Ctrl+C para terminar."
+        "$PY" stiv_directo.py --camara myoshoji --archivo "$clip" --modo "$modo" --sin-ventana --paso-medida 5 \
+            --tiempo-real --bucle --web 8080 2>&1 | grep -v '^\[h264'
+        ;;
+    web)
+        [ -f "$CONF" ] || { echo "falta $CONF: ejecuta antes raspberry/instalar.sh"; exit 1; }
+        puerto="$(sed -n 's/^STIV_ARGS=.*--web \([0-9]*\).*/\1/p' "$CONF")"
+        if [ -z "$puerto" ]; then
+            echo "la linea STIV_ARGS de stiv.conf no tiene --web: anade por ejemplo --web 8080 (./raspberry/stiv.sh editar)"
+            exit 1
+        fi
+        echo "El servicio esta: $(systemctl is-active stiv 2>/dev/null). Abre en el navegador del PC:"
+        direccion_web "$puerto"
         ;;
     activar)     sudo systemctl enable --now stiv && echo "activado: arrancara solo en cada encendido" ;;
     desactivar)  sudo systemctl disable --now stiv && echo "desactivado y parado" ;;

@@ -51,7 +51,7 @@ import cv2
 import numpy as np
 
 _RAIZ = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # raiz del proyecto
-sys.path.insert(0, os.path.join(_RAIZ, "casos", "08_canal_riego", "medicion"))
+sys.path.insert(0, os.path.join(_RAIZ, "archivo", "08_canal_piloto_yaqui", "medicion"))
 import escritor_video as ev      # noqa: E402
 import stiv_canal as sc          # noqa: E402
 import video_velocidad as vv     # noqa: E402

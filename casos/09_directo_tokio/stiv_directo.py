@@ -22,6 +22,9 @@ con el tensor de estructura. pyorc no se importa en ningun momento.
 
 En una Raspberry Pi (sin pantalla): --sin-ventana, y --vista-cada 30 para tener la imagen anotada
 al dia en salidas/<camara>/ultima_vista.png. Ver raspberry/LEEME.md.
+    --web 8080           el directo anotado y las metricas (fps, cola, CPU, RAM, temperatura, frenado)
+                         en el navegador de cualquier equipo de la red: http://raspberrypi.local:8080
+    --tiempo-real --bucle  un video grabado a su velocidad real y sin fin, como si fuera un directo
 
 La ventana muestra dos vistas a la vez: el directo tal cual y la vista RECTIFICADA (en planta, el
 agua como se veria desde arriba, con el flujo de izquierda a derecha), las dos con las lineas, las
@@ -706,15 +709,19 @@ def resolver_url(url_pagina):
 class Lector(threading.Thread):
     """Lee el flujo en un hilo aparte y entrega (pts_s, fotograma). Reconecta si se corta."""
 
-    def __init__(self, origen, es_archivo):
+    def __init__(self, origen, es_archivo, bucle=False, cola_max=150):
         super().__init__(daemon=True)
         self.origen, self.es_archivo = origen, es_archivo
+        # bucle: un archivo vuelve a empezar al acabar (demostracion continua en la Raspberry); cada
+        # vuelta se entrega como un "corte", asi el STI se vacia y el reloj sigue creciendo
+        self.bucle, self.vueltas = bucle and es_archivo, 0
         # YouTube se resuelve con yt-dlp; cualquier otra URL (rtsp://, http://...m3u8) se abre tal cual
         self.es_youtube = not es_archivo and ("youtube.com" in origen or "youtu.be" in origen)
         # 150 fotogramas = 5 s a 30 fps, ~415 MB a 1280x720. Con 600 el pico de memoria llego a 1.3 GB
         # al procesar un archivo (la lectura va por delante): demasiado para una Raspberry de 4 GB.
-        # Si se llena, el lector espera; no se pierde la sincronia del STI.
-        self.cola = queue.Queue(maxsize=150)
+        # Si se llena, el lector espera; no se pierde la sincronia del STI. Un archivo a velocidad real
+        # no necesita colchon: con 150 la cola vivia llena (~670 MB el proceso) sin servir de nada.
+        self.cola = queue.Queue(maxsize=cola_max)
         self.parar = threading.Event()
         self.fps = 30.0
         self.titulo = ""
@@ -768,6 +775,10 @@ class Lector(threading.Thread):
             cap.release()
             if self.parar.is_set():
                 return
+            if self.bucle:
+                self.vueltas += 1
+                self.cola.put("corte")
+                continue
             if self.es_archivo:
                 self.cola.put(None)
                 return
@@ -850,6 +861,7 @@ class Medidor(threading.Thread):
         self.entrada = queue.Queue(maxsize=1)
         self.salida = queue.Queue()
         self.n, self.segundos = 0, 0.0     # para el resumen: cuanto cuesta cada medida
+        self.ultima = 0.0                  # segundos de la ultima (metricas del visor web)
 
     def libre(self):
         return self.entrada.empty() and self.salida.empty()
@@ -873,7 +885,8 @@ class Medidor(threading.Thread):
                      if modo == "dia" else None)
             brillo = np.median(np.stack(brillos), axis=0) if brillos else None
             res = medir(buffers, geom, cobertura, modo, brillo, motas)
-            self.n, self.segundos = self.n + 1, self.segundos + time.perf_counter() - c0
+            self.ultima = time.perf_counter() - c0
+            self.n, self.segundos = self.n + 1, self.segundos + self.ultima
             self.salida.put((gen, t, res))
 
 
@@ -1095,6 +1108,415 @@ def guardar_vista(frame, geom, res, cfg, t, llenado, args, modo="dia"):
     os.replace(tmp, ARCHIVO_VISTA)
 
 
+# ─────────────────────────────────────────── visor web ───────────────────────────────────────────
+# Para la Raspberry (sin pantalla): --web 8080 sirve el directo anotado y las metricas al navegador de
+# cualquier equipo de la red (http://raspberrypi.local:8080). Solo biblioteca estandar: nada que
+# instalar en la Pi.
+WEB_ANCHO_MAX = 1600        # la imagen compuesta (~2000 px) se reduce: menos CPU en la Pi y menos red
+WEB_CALIDAD_JPEG = 70
+WEB_PERIODO_SIN_CLIENTES = 5.0   # sin nadie mirando solo se renueva /foto.jpg cada 5 s
+
+
+class Recursos:
+    """CPU, memoria, temperatura y frenado del equipo. En Linux (la Raspberry) lee /proc y /sys; en otro
+    sistema usa psutil si esta instalado y, si no, deja esos valores en None."""
+
+    def __init__(self):
+        self.linux = os.path.exists("/proc/self/stat")
+        self.nucleos = os.cpu_count() or 1
+        self.previo = None                    # (jiffies totales, ociosos, del proceso) de la ultima lectura
+        self.frenado, self.t_frenado = (None, None), -1e9
+        self.proceso = None
+        if not self.linux:
+            try:
+                import psutil
+                self.psutil, self.proceso = psutil, psutil.Process()
+                self.proceso.cpu_percent(None)
+            except ImportError:
+                pass
+
+    @staticmethod
+    def _leer(ruta):
+        try:
+            with open(ruta) as f:
+                return f.read()
+        except OSError:
+            return None
+
+    @staticmethod
+    def _kb(texto, clave):
+        for linea in (texto or "").splitlines():
+            if linea.startswith(clave + ":"):
+                return int(linea.split()[1])
+        return None
+
+    def _cpu_linux(self):
+        """(% del proceso, % del sistema) desde la lectura anterior. El del proceso es sobre UN nucleo
+        (hasta 100 x nucleos %), como top; el del sistema, sobre todos."""
+        st, sp = self._leer("/proc/stat"), self._leer("/proc/self/stat")
+        if not st or not sp:
+            return None, None
+        c = [int(x) for x in st.split("\n", 1)[0].split()[1:]]
+        total, ocioso = sum(c[:8]), c[3] + c[4]
+        campos = sp.rsplit(")", 1)[1].split()      # el nombre del proceso puede tener espacios
+        propio = int(campos[11]) + int(campos[12])   # utime + stime
+        previo, self.previo = self.previo, (total, ocioso, propio)
+        if previo is None or total <= previo[0]:
+            return None, None
+        dt = total - previo[0]
+        return (100.0 * (propio - previo[2]) * self.nucleos / dt,
+                100.0 * (1.0 - (ocioso - previo[1]) / dt))
+
+    def _frenado(self):
+        """get_throttled de la Raspberry (cada 10 s: lanzar vcgencmd cuesta ~10 ms)."""
+        if time.time() - self.t_frenado < 10.0:
+            return self.frenado
+        self.t_frenado = time.time()
+        try:
+            import subprocess
+            salida = subprocess.run(["vcgencmd", "get_throttled"], capture_output=True, text=True,
+                                    timeout=2).stdout
+            valor = int(salida.strip().split("=")[1], 16)
+        except Exception:  # noqa: BLE001 - no es una Raspberry o vcgencmd no responde
+            self.frenado = (None, None)
+            return self.frenado
+        ahora = [n for b, n in ((0, "tension baja"), (1, "frecuencia limitada"), (2, "frenada"),
+                                (3, "limite de temperatura")) if valor >> b & 1]
+        antes = [n for b, n in ((16, "tension baja"), (17, "frecuencia limitada"), (18, "frenada"),
+                                (19, "limite de temperatura")) if valor >> b & 1]
+        texto = ("AHORA: " + ", ".join(ahora) if ahora else "no") + \
+                (" | desde el arranque: " + ", ".join(antes) if antes else "")
+        self.frenado = (texto, hex(valor))
+        return self.frenado
+
+    def leer(self):
+        r = {"nucleos": self.nucleos, "cpu_proceso": None, "cpu_sistema": None, "ram_proceso_mb": None,
+             "ram_pico_mb": None, "ram_total_mb": None, "ram_disponible_mb": None, "temperatura_c": None,
+             "frecuencia_mhz": None, "carga": None, "frenado": None, "frenado_hex": None,
+             "disco_libre_gb": None, "encendida": None}
+        if self.linux:
+            r["cpu_proceso"], r["cpu_sistema"] = self._cpu_linux()
+            estado = self._leer("/proc/self/status")
+            mem = self._leer("/proc/meminfo")
+            for clave, nombre in (("VmRSS", "ram_proceso_mb"), ("VmHWM", "ram_pico_mb")):
+                kb = self._kb(estado, clave)
+                r[nombre] = kb / 1024 if kb is not None else None
+            for clave, nombre in (("MemTotal", "ram_total_mb"), ("MemAvailable", "ram_disponible_mb")):
+                kb = self._kb(mem, clave)
+                r[nombre] = kb / 1024 if kb is not None else None
+            temp = self._leer("/sys/class/thermal/thermal_zone0/temp")
+            r["temperatura_c"] = int(temp) / 1000 if temp and temp.strip().isdigit() else None
+            frec = self._leer("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+            r["frecuencia_mhz"] = int(frec) / 1000 if frec and frec.strip().isdigit() else None
+            r["carga"] = list(os.getloadavg())
+            arranque = self._leer("/proc/uptime")
+            if arranque:
+                s = int(float(arranque.split()[0]))
+                r["encendida"] = f"encendida hace {s // 3600} h {s % 3600 // 60} min"
+            r["frenado"], r["frenado_hex"] = self._frenado()
+        elif self.proceso is not None:
+            r["cpu_proceso"] = self.proceso.cpu_percent(None)
+            r["cpu_sistema"] = self.psutil.cpu_percent(None)
+            info = self.proceso.memory_info()
+            r["ram_proceso_mb"] = info.rss / 2**20
+            r["ram_pico_mb"] = getattr(info, "peak_wset", info.rss) / 2**20
+            vm = self.psutil.virtual_memory()
+            r["ram_total_mb"], r["ram_disponible_mb"] = vm.total / 2**20, vm.available / 2**20
+        try:
+            import shutil
+            r["disco_libre_gb"] = shutil.disk_usage(os.path.dirname(os.path.abspath(__file__))).free / 2**30
+        except OSError:
+            pass
+        return r
+
+
+def _json_limpio(x):
+    """NaN e infinitos -> None (JSON.parse del navegador no los acepta); numpy -> tipos de Python."""
+    if isinstance(x, dict):
+        return {k: _json_limpio(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_json_limpio(v) for v in x]
+    if isinstance(x, (np.integer, np.bool_)):
+        return x.item()
+    if isinstance(x, (float, np.floating)):
+        x = float(x)
+        return x if np.isfinite(x) else None
+    return x
+
+
+class VisorWeb:
+    """Servidor HTTP minimo: / pagina, /video directo MJPEG, /foto.jpg ultima imagen, /metricas JSON.
+    La imagen solo se dibuja a ritmo de --web-fps si alguien la esta mirando: sin clientes no le quita
+    CPU a la medida."""
+
+    def __init__(self, puerto, fps):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        self.periodo = 1.0 / max(fps, 0.2)
+        self.cond = threading.Condition()
+        self.jpeg, self.n_imagen, self.t_imagen = None, 0, -1e9
+        self.metricas = {}
+        self.clientes = 0
+        self.marcas = deque(maxlen=30)       # horas de las ultimas imagenes: fps real del visor
+        self.ms_dibujo = None
+        visor = self
+
+        class Manejador(BaseHTTPRequestHandler):
+            def log_message(self, *_):
+                pass
+
+            def _enviar(self, tipo, cuerpo, codigo=200):
+                self.send_response(codigo)
+                self.send_header("Content-Type", tipo)
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(cuerpo)))
+                self.end_headers()
+                self.wfile.write(cuerpo)
+
+            def do_GET(self):
+                ruta = self.path.split("?", 1)[0]
+                try:
+                    if ruta == "/":
+                        self._enviar("text/html; charset=utf-8", PAGINA_WEB.encode("utf-8"))
+                    elif ruta == "/metricas":
+                        with visor.cond:
+                            m = visor.metricas
+                        self._enviar("application/json", json.dumps(m, allow_nan=False).encode("utf-8"))
+                    elif ruta == "/foto.jpg":
+                        with visor.cond:
+                            j = visor.jpeg
+                        if j is None:
+                            self._enviar("text/plain; charset=utf-8", "aun no hay imagen".encode(), 503)
+                        else:
+                            self._enviar("image/jpeg", j)
+                    elif ruta == "/video":
+                        visor._mjpeg(self)
+                    else:
+                        self._enviar("text/plain; charset=utf-8", b"no existe", 404)
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    pass    # el navegador cerro la pestana
+
+        self.servidor = ThreadingHTTPServer(("0.0.0.0", puerto), Manejador)
+        self.servidor.daemon_threads = True
+        threading.Thread(target=self.servidor.serve_forever, daemon=True).start()
+
+    def _mjpeg(self, h):
+        h.send_response(200)
+        h.send_header("Content-Type", "multipart/x-mixed-replace; boundary=imagen")
+        h.send_header("Cache-Control", "no-store")
+        h.end_headers()
+        with self.cond:
+            self.clientes += 1
+        try:
+            visto = -1
+            while True:
+                with self.cond:
+                    # si no llega imagen nueva en 5 s se reenvia la ultima: asi se nota si el
+                    # navegador se ha ido y el hilo termina
+                    self.cond.wait_for(lambda: self.n_imagen != visto, timeout=5.0)
+                    j, visto = self.jpeg, self.n_imagen
+                if j is not None:
+                    h.wfile.write(b"--imagen\r\nContent-Type: image/jpeg\r\nContent-Length: " +
+                                  str(len(j)).encode() + b"\r\n\r\n" + j + b"\r\n")
+        finally:
+            with self.cond:
+                self.clientes -= 1
+
+    def toca_imagen(self, ahora):
+        periodo = self.periodo if self.clientes else WEB_PERIODO_SIN_CLIENTES
+        return ahora - self.t_imagen >= periodo
+
+    def fps(self):
+        m = self.marcas
+        return (len(m) - 1) / (m[-1] - m[0]) if len(m) > 2 and m[-1] > m[0] else None
+
+    def publicar_imagen(self, img, pie, c0):
+        """img: la vista de dibujar(); pie: linea de rendimiento que se anade debajo; c0: perf_counter
+        de antes de dibujar (para medir cuanto cuesta el visor)."""
+        if img.shape[1] > WEB_ANCHO_MAX:
+            f = WEB_ANCHO_MAX / img.shape[1]
+            img = cv2.resize(img, None, fx=f, fy=f, interpolation=cv2.INTER_AREA)
+        franja = np.zeros((26, img.shape[1], 3), np.uint8)
+        cv2.putText(franja, pie, (8, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        ok, buf = cv2.imencode(".jpg", np.vstack([img, franja]), [cv2.IMWRITE_JPEG_QUALITY, WEB_CALIDAD_JPEG])
+        if not ok:
+            return
+        ms = 1000 * (time.perf_counter() - c0)
+        self.ms_dibujo = ms if self.ms_dibujo is None else 0.8 * self.ms_dibujo + 0.2 * ms
+        ahora = time.time()
+        with self.cond:
+            self.jpeg, self.n_imagen, self.t_imagen = buf.tobytes(), self.n_imagen + 1, ahora
+            self.marcas.append(ahora)
+            self.cond.notify_all()
+
+    def publicar_metricas(self, m):
+        m = _json_limpio(m)
+        with self.cond:
+            self.metricas = m
+
+    def cerrar(self):
+        self.servidor.shutdown()
+        self.servidor.server_close()
+
+
+PAGINA_WEB = r"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STIV directo</title>
+<style>
+:root{--fondo:#0f1215;--panel:#181c21;--borde:#2a3038;--texto:#e6e9ec;--tenue:#8b949e;
+--ok:#3fb950;--aviso:#d29922;--mal:#f85149;--acento:#58a6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font:14px/1.4 system-ui,"Segoe UI",Roboto,sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--borde)}
+header h1{font-size:16px;margin:0;font-weight:600}
+#estado{font-size:12px;color:var(--tenue)}
+.punto{width:10px;height:10px;border-radius:50%;background:var(--mal);flex:none}
+.punto.vivo{background:var(--ok)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;padding:12px 16px}
+@media(max-width:1100px){main{grid-template-columns:minmax(0,1fr)}}
+#video{width:100%;background:#000;border:1px solid var(--borde);border-radius:6px;display:block;min-height:120px}
+.tarjetas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.t{background:var(--panel);border:1px solid var(--borde);border-radius:6px;padding:8px 10px;min-width:0}
+.t .n{font-size:11px;color:var(--tenue);text-transform:uppercase;letter-spacing:.04em}
+.t .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t .d{font-size:11px;color:var(--tenue);min-height:15px}
+.t canvas{width:100%;height:28px;display:block;margin-top:4px}
+h2{font-size:12px;color:var(--tenue);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+td,th{padding:3px 6px;border-bottom:1px solid var(--borde);text-align:right}
+th{color:var(--tenue);font-weight:500}
+td:first-child,th:first-child{text-align:left}
+.ok{color:var(--ok)}.no{color:var(--mal)}.aviso{color:var(--aviso)}
+</style></head><body>
+<header><div class="punto" id="punto"></div><h1 id="titulo">STIV directo</h1><span id="estado">conectando...</span></header>
+<main>
+<section>
+<img id="video" src="/video" alt="directo anotado">
+<h2>Estaciones (ultima medida)</h2>
+<table><thead><tr><th>Est.</th><th>v (m/s)</th><th>Escala</th><th>Coherencia</th><th>Bloques</th><th>Estado</th></tr></thead>
+<tbody id="estaciones"></tbody></table>
+</section>
+<aside>
+<h2>Medicion</h2><div class="tarjetas" id="medicion"></div>
+<h2>Rendimiento</h2><div class="tarjetas" id="rendimiento"></div>
+<h2>Equipo</h2><div class="tarjetas" id="equipo"></div>
+</aside>
+</main>
+<script>
+const HIST = 120, hist = {};
+const video = document.getElementById("video");
+let perdido = false;
+video.onerror = () => setTimeout(() => { video.src = "/video?" + Date.now(); }, 2000);
+
+function f(x, d, u) { return x == null ? "–" : x.toFixed(d) + (u || ""); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+
+function serie(c, h) {
+  const r = devicePixelRatio || 1, w = c.width = c.clientWidth * r, alto = c.height = c.clientHeight * r;
+  const g = c.getContext("2d"), vals = h.filter(x => x != null);
+  if (vals.length < 2) return;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
+  g.strokeStyle = "#58a6ff"; g.lineWidth = 1.5 * r; g.beginPath();
+  h.forEach((x, i) => {
+    if (x == null) return;
+    const px = i / (HIST - 1) * w, py = alto - (x - lo) / (hi - lo) * (alto - 4 * r) - 2 * r;
+    (i && h[i - 1] != null) ? g.lineTo(px, py) : g.moveTo(px, py);
+  });
+  g.stroke();
+}
+
+// tarjeta: nombre, valor grande, detalle y (si se pasa "historia") la serie de los ultimos 2 minutos
+function tarjeta(caja, id, nombre, valor, detalle, historia, clase) {
+  let el = document.getElementById("t_" + id);
+  if (!el) {
+    el = document.createElement("div"); el.className = "t"; el.id = "t_" + id;
+    el.innerHTML = '<div class="n"></div><div class="v"></div><div class="d"></div>' +
+                   (historia !== undefined ? "<canvas></canvas>" : "");
+    document.getElementById(caja).appendChild(el);
+  }
+  el.querySelector(".n").textContent = nombre;
+  const v = el.querySelector(".v"); v.textContent = valor; v.className = "v " + (clase || "");
+  el.querySelector(".d").textContent = detalle || "";
+  if (historia !== undefined) {
+    const h = hist[id] = hist[id] || [];
+    h.push(historia); if (h.length > HIST) h.shift();
+    serie(el.querySelector("canvas"), h);
+  }
+}
+
+async function actualizar() {
+  let m;
+  try {
+    const r = await fetch("/metricas", {cache: "no-store"});
+    m = await r.json();
+  } catch (e) {
+    perdido = true;
+    document.getElementById("punto").className = "punto";
+    document.getElementById("estado").textContent = "sin conexion con el equipo (reintentando)";
+    return;
+  }
+  if (perdido) { perdido = false; video.src = "/video?" + Date.now(); }
+  if (!m.hora) return;
+  const s = m.sistema || {};
+  document.getElementById("punto").className = "punto vivo";
+  document.getElementById("titulo").textContent = m.titulo || "STIV directo";
+  document.title = "STIV - " + (m.camara || "");
+  document.getElementById("estado").textContent =
+    `camara ${m.camara} | modo ${m.modo || "?"} | t = ${f(m.t_flujo, 0, " s")}` +
+    (m.vueltas ? ` | vuelta ${m.vueltas + 1} del video` : "") + ` | ${m.hora}`;
+
+  tarjeta("medicion", "med", "Mediana seccion", f(m.mediana_v, 3, " m/s"),
+          `${m.aceptadas}/${m.n_estaciones} estaciones` + (m.escala_verificada ? "" : " | escala supuesta"),
+          m.mediana_v, m.aceptadas ? "ok" : "no");
+  tarjeta("medicion", "sti", "STI llenado", (m.llenado || []).map(x => Math.round(100 * x) + "%").join(" / "),
+          "escalas 10 s / 30 s / 60 s");
+
+  const lento = m.x_tiempo_real != null && m.x_tiempo_real < 0.95 && m.tiempo_real;
+  tarjeta("rendimiento", "fps", "Proceso", f(m.fps_proceso, 1, " fps"),
+          `fuente ${f(m.fps_fuente, 1)} fps | x${f(m.x_tiempo_real, 2)} tiempo real`, m.fps_proceso,
+          lento ? "no" : "ok");
+  // con un archivo a velocidad real la cola llena es normal (el lector va por delante); en un directo
+  // significa que el equipo no da abasto
+  tarjeta("rendimiento", "cola", "Cola de fotogramas", `${m.cola} / ${m.cola_max}`,
+          `retraso ${f(m.retraso_s, 1, " s")}` + (m.tiempo_real ? " | archivo: llena es normal" : ""), m.cola,
+          !m.tiempo_real && m.cola > m.cola_max / 2 ? "aviso" : "");
+  tarjeta("rendimiento", "msf", "Por fotograma", f(m.ms_fotograma, 1, " ms"),
+          `presupuesto ${f(m.fps_fuente ? 1000 / m.fps_fuente : null, 0, " ms")} (hilo principal)`, m.ms_fotograma);
+  tarjeta("rendimiento", "msm", "Por medida", f(m.ms_medida, 0, " ms"),
+          `media ${f(m.ms_medida_media, 0, " ms")} | cada ${m.paso_medida_s} s | ${m.n_medidas} medidas`, m.ms_medida);
+  tarjeta("rendimiento", "vis", "Visor web", f(m.fps_visor, 1, " fps"),
+          `dibujo ${f(m.ms_dibujo, 0, " ms")} | ${m.clientes} mirando`);
+
+  tarjeta("equipo", "cpu", "CPU del programa", f(s.cpu_proceso, 0, " %"),
+          `sistema ${f(s.cpu_sistema, 0, " %")} | ${s.nucleos} nucleos (100 % = 1 nucleo)`, s.cpu_proceso);
+  tarjeta("equipo", "ram", "RAM del programa", f(s.ram_proceso_mb, 0, " MB"), `pico ${f(s.ram_pico_mb, 0, " MB")}`,
+          s.ram_proceso_mb);
+  const usada = s.ram_total_mb != null && s.ram_disponible_mb != null ? s.ram_total_mb - s.ram_disponible_mb : null;
+  tarjeta("equipo", "rams", "RAM del equipo", usada == null ? "–" : `${f(usada, 0)} / ${f(s.ram_total_mb, 0, " MB")}`,
+          `disponible ${f(s.ram_disponible_mb, 0, " MB")}`, usada);
+  tarjeta("equipo", "temp", "Temperatura CPU", f(s.temperatura_c, 1, " °C"),
+          s.frecuencia_mhz ? `CPU a ${f(s.frecuencia_mhz, 0, " MHz")}` : "", s.temperatura_c,
+          s.temperatura_c > 80 ? "no" : s.temperatura_c > 70 ? "aviso" : "");
+  tarjeta("equipo", "fren", "Frenado (calor / fuente)", s.frenado || "–", s.frenado_hex || "", undefined,
+          s.frenado_hex && s.frenado_hex !== "0x0" ? "aviso" : "ok");
+  tarjeta("equipo", "carga", "Carga", s.carga ? s.carga.map(x => x.toFixed(2)).join("  ") : "–", "1 / 5 / 15 min");
+  tarjeta("equipo", "disco", "Disco libre", f(s.disco_libre_gb, 1, " GB"), s.encendida || "");
+
+  const filas = (m.estaciones || []).map(e =>
+    `<tr><td>${e.i}</td><td class="${e.aceptada ? "ok" : ""}">${e.aceptada ? f(e.v, 3) : "–"}</td>` +
+    `<td>${esc(e.escala)}${e.motas ? " motas" : ""}</td><td>${f(e.coherencia, 2)}</td><td>${e.bloques}</td>` +
+    `<td class="${e.aceptada ? "ok" : "no"}">${e.aceptada ? "valida" : esc(e.motivo)}</td></tr>`);
+  document.getElementById("estaciones").innerHTML =
+    filas.join("") || '<tr><td colspan="6">llenando el STI (10 s)...</td></tr>';
+}
+setInterval(actualizar, 1000);
+actualizar();
+</script>
+</body></html>
+"""
+
+
 # ─────────────────────────────────────────── bucle ───────────────────────────────────────────────
 def main():
     global PASO_MEDIDA_S
@@ -1118,8 +1540,26 @@ def main():
                     help="sin ventana: guardar la imagen anotada cada N s de flujo (0 = solo al salir)")
     ap.add_argument("--elegir", action="store_true",
                     help="menu en la consola con las fuentes de fuentes.json (lo usa arrancar.bat)")
+    ap.add_argument("--web", type=int, default=0, metavar="PUERTO",
+                    help="servir el directo anotado y las metricas al navegador (p. ej. 8080; 0 = no)")
+    ap.add_argument("--web-fps", type=float, default=5.0,
+                    help="imagenes por segundo del visor web mientras alguien mira (por defecto 5)")
+    ap.add_argument("--tiempo-real", action="store_true",
+                    help="con --archivo: reproducirlo a su velocidad real, como si fuera un directo")
+    ap.add_argument("--bucle", action="store_true",
+                    help="con --archivo: volver a empezar al acabar (demostracion continua)")
     args = ap.parse_args()
     args.ajustes, args.titulo = None, None
+    args.visor = None
+    if args.web:
+        try:
+            args.visor = VisorWeb(args.web, args.web_fps)
+        except OSError as e:
+            print(f"aviso: no se pudo abrir el visor web en el puerto {args.web} ({e}); se sigue sin el",
+                  file=sys.stderr)
+        else:
+            import socket
+            print(f"visor web: http://{socket.gethostname()}.local:{args.web}  (o http://<IP>:{args.web})")
     # la fecha del archivo identifica la version: cambiar de fuente (c, 1-9) NO recarga el codigo,
     # hay que cerrar y volver a abrir el programa
     version = datetime.fromtimestamp(os.path.getmtime(os.path.abspath(__file__)))
@@ -1145,6 +1585,8 @@ def main():
             break
         anterior = (args, actual)
         args, actual = args_de_fuente(args, fuentes[siguiente]), siguiente
+    if args.visor is not None:
+        args.visor.cerrar()
     if not args.sin_ventana:
         # en OpenCV sin interfaz (opencv-python-headless, el de la Raspberry) esto da error
         cv2.destroyAllWindows()
@@ -1182,7 +1624,8 @@ def ejecutar(args, fuentes, actual):
     if not args.archivo and URL_FUENTE.startswith("rtsp"):
         # por TCP: por UDP se pierden paquetes en cuanto la red titubea y salen fotogramas rotos
         os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
-    lector = Lector(args.archivo or URL_FUENTE, bool(args.archivo))
+    lector = Lector(args.archivo or URL_FUENTE, bool(args.archivo), args.bucle,
+                    30 if args.archivo and args.tiempo_real else 150)
     print(f"abriendo {args.archivo}" if args.archivo else
           "resolviendo el flujo..." if lector.es_youtube else f"conectando a {ocultar_clave(URL_FUENTE)}")
     lector.start()
@@ -1254,6 +1697,51 @@ def ejecutar(args, fuentes, actual):
                     ) if len(fuentes) > 1 else ""
     escala_ventana, pantalla_completa = None, False   # la escala se fija con el primer fotograma
     con_panel = True
+    # metricas del visor web
+    visor = args.visor
+    recursos = Recursos() if visor is not None else None
+    marcas = deque(maxlen=90)       # perf_counter de los ultimos fotogramas: fps de proceso
+    ms_fotograma = None             # coste del hilo principal por fotograma (media movil)
+    t_ult_metricas = 0.0
+
+    def metricas_visor(retraso):
+        fps_proc = ((len(marcas) - 1) / (marcas[-1] - marcas[0])
+                    if len(marcas) > 2 and marcas[-1] > marcas[0] else None)
+        ac = [r["v"] for r in res if r["aceptada"]] if res else []
+        return {
+            "hora": datetime.now().isoformat(timespec="seconds"), "titulo": titulo_de(args),
+            "camara": args.camara, "modo": modo, "t_flujo": t, "vueltas": lector.vueltas,
+            "fps_fuente": lector.fps, "fps_proceso": fps_proc,
+            "x_tiempo_real": fps_proc / lector.fps if fps_proc else None, "tiempo_real": args.tiempo_real,
+            "retraso_s": retraso, "cola": lector.cola.qsize(), "cola_max": lector.cola.maxsize,
+            "ms_fotograma": ms_fotograma, "ms_medida": 1000 * medidor.ultima if medidor.n else None,
+            "ms_medida_media": 1000 * medidor.segundos / medidor.n if medidor.n else None,
+            "n_medidas": medidor.n, "paso_medida_s": PASO_MEDIDA_S, "llenado": bufs.llenado(),
+            "fps_visor": visor.fps(), "ms_dibujo": visor.ms_dibujo, "clientes": visor.clientes,
+            "mediana_v": float(np.median(ac)) if ac else None, "aceptadas": len(ac),
+            "n_estaciones": N_ESTACIONES, "escala_verificada": bool(cfg.get("escala_verificada")),
+            "estaciones": [{"i": i, "v": r["v"], "aceptada": bool(r["aceptada"]),
+                            "motivo": r["motivos"].split("+")[0], "escala": NOMBRE_ESCALA[r["escala"]],
+                            "motas": bool(r.get("motas")), "coherencia": r["coherencia"],
+                            "bloques": r["bloques_activos"]} for i, r in enumerate(res or [])],
+            "sistema": recursos.leer(),
+        }
+
+    def pie_visor(m):
+        s = m["sistema"]
+        partes = [f"proceso {m['fps_proceso']:.1f} fps (x{m['x_tiempo_real']:.2f})" if m["fps_proceso"] else
+                  "proceso -", f"cola {m['cola']}"]
+        if m["ms_medida"]:
+            partes.append(f"medida {m['ms_medida']:.0f} ms")
+        if s["cpu_proceso"] is not None:
+            partes.append(f"CPU {s['cpu_proceso']:.0f}%")
+        if s["ram_proceso_mb"] is not None:
+            partes.append(f"RAM {s['ram_proceso_mb']:.0f} MB")
+        if s["temperatura_c"] is not None:
+            partes.append(f"{s['temperatura_c']:.1f} C")
+        return "  |  ".join(partes)
+
+    metricas = None
 
     if not args.sin_ventana:
         def raton(evento, x, y, flags, _):
@@ -1354,14 +1842,35 @@ def ejecutar(args, fuentes, actual):
                                f"{r['motivos'].split('+')[0][:6]:>7s}" for r in res) +
                       f" | cola {lector.cola.qsize()}")
 
-            coste_proceso += time.perf_counter() - c0
+            coste = time.perf_counter() - c0
+            coste_proceso += coste
+            ms_fotograma = 1000 * coste if ms_fotograma is None else 0.95 * ms_fotograma + 50 * coste
+            marcas.append(time.perf_counter())
             if args.duracion and t >= args.duracion:
                 break
+            if visor is not None:
+                ahora = time.time()
+                retraso_v = (ahora - reloj_ini) - t
+                if metricas is None or ahora - t_ult_metricas >= 1.0:
+                    metricas = metricas_visor(retraso_v)
+                    visor.publicar_metricas(metricas)
+                    t_ult_metricas = ahora
+                if visor.toca_imagen(ahora):
+                    c1 = time.perf_counter()
+                    estado = {"titulo": titulo_de(args), "t": t, "llenado": bufs.llenado(),
+                              "retraso": max(retraso_v, 0.0), "modo": modo,
+                              "px_muestra": geom.px_por_muestra, "verificada": bool(cfg.get("escala_verificada"))}
+                    visor.publicar_imagen(dibujar(frame, geom, res, estado, False), pie_visor(metricas), c1)
             if args.sin_ventana:
                 ultimo = frame
                 if args.vista_cada and res and t - t_ult_vista >= args.vista_cada:
                     guardar_vista(ultimo, geom, res, cfg, t, bufs.llenado(), args, modo)
                     t_ult_vista = t
+                if args.tiempo_real:
+                    # un archivo sin ventana va lo mas rapido que puede; asi se ve como un directo
+                    retraso = (time.time() - reloj_ini) - t
+                    if retraso < 0:
+                        time.sleep(min(-retraso, 0.5))
                 continue
 
             # el directo llega a rafagas (al arrancar entrega varios segundos de golpe): se reproduce
