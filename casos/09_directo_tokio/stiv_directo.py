@@ -1151,8 +1151,8 @@ class Recursos:
         return None
 
     def _cpu_linux(self):
-        """(% del proceso, % del sistema) desde la lectura anterior. El del proceso es sobre UN nucleo
-        (hasta 100 x nucleos %), como top; el del sistema, sobre todos."""
+        """(% del proceso, % del sistema) desde la lectura anterior, los dos sobre la capacidad TOTAL
+        del equipo (0-100 %; top daria el del proceso por nucleo, hasta 100 x nucleos %)."""
         st, sp = self._leer("/proc/stat"), self._leer("/proc/self/stat")
         if not st or not sp:
             return None, None
@@ -1164,8 +1164,8 @@ class Recursos:
         if previo is None or total <= previo[0]:
             return None, None
         dt = total - previo[0]
-        return (100.0 * (propio - previo[2]) * self.nucleos / dt,
-                100.0 * (1.0 - (ocioso - previo[1]) / dt))
+        # dt son jiffies de todos los nucleos juntos
+        return 100.0 * (propio - previo[2]) / dt, 100.0 * (1.0 - (ocioso - previo[1]) / dt)
 
     def _frenado(self):
         """get_throttled de la Raspberry (cada 10 s: lanzar vcgencmd cuesta ~10 ms)."""
@@ -1215,7 +1215,7 @@ class Recursos:
                 r["encendida"] = f"encendida hace {s // 3600} h {s % 3600 // 60} min"
             r["frenado"], r["frenado_hex"] = self._frenado()
         elif self.proceso is not None:
-            r["cpu_proceso"] = self.proceso.cpu_percent(None)
+            r["cpu_proceso"] = self.proceso.cpu_percent(None) / self.nucleos   # psutil lo da por nucleo
             r["cpu_sistema"] = self.psutil.cpu_percent(None)
             info = self.proceso.memory_info()
             r["ram_proceso_mb"] = info.rss / 2**20
@@ -1489,7 +1489,7 @@ async function actualizar() {
           `dibujo ${f(m.ms_dibujo, 0, " ms")} | ${m.clientes} mirando`);
 
   tarjeta("equipo", "cpu", "CPU del programa", f(s.cpu_proceso, 0, " %"),
-          `sistema ${f(s.cpu_sistema, 0, " %")} | ${s.nucleos} nucleos (100 % = 1 nucleo)`, s.cpu_proceso);
+          `del total (${s.nucleos} nucleos) | equipo entero ${f(s.cpu_sistema, 0, " %")}`, s.cpu_proceso);
   tarjeta("equipo", "ram", "RAM del programa", f(s.ram_proceso_mb, 0, " MB"), `pico ${f(s.ram_pico_mb, 0, " MB")}`,
           s.ram_proceso_mb);
   const usada = s.ram_total_mb != null && s.ram_disponible_mb != null ? s.ram_total_mb - s.ram_disponible_mb : null;

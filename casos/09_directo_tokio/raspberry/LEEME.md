@@ -207,10 +207,15 @@ Probado, sin Raspberry real, con el banco de pruebas de `../pruebas_docker/` (se
   pantalla; al reconectar, el tiempo del flujo volvia a 0 y no se media hasta superar el tiempo de
   antes del corte; la cola de 600 fotogramas llevaba la memoria a 1.3 GB (ahora 150, ~626 MB).
 
+**En una Pi 4B real (2026-10-22)**, con el `stiv.conf` de ejemplo y el visor web abierto: va a
+tiempo real (30 fps, x1.00), 12 ms por fotograma, ~0.47 s por medida, ~400 MB de RAM, 59-68 C y sin
+frenado (`0x0`); el visor llega a ~3.3 imagenes/s. Video, captura y metricas por segundo en
+`../salidas_raspberry/visor_web_20261022/`. Arrancaba desde un pendrive USB (lento: la instalacion
+tardo ~50 min); con una microSD buena o un SSD USB tarda mucho menos.
+
 **No probado** (necesita la Pi de verdad):
 
-- **Cuanto tarda una Pi 4B**: la emulacion no dice nada de la velocidad real. Es lo primero que
-  mide `stiv.sh prueba`. En el PC: 1-2 ms por fotograma y ~0.5 s por medida.
+- `stiv.sh prueba` (rendimiento sin el visor web).
 - `stiv.sh registro` (journald no funciona en el contenedor), la temperatura (`vcgencmd`), el
   nombre `stiv-rio.local`, la contrasena de `sudo` pedida a traves de `ssh -t`, y `-ConfigurarLlave`
   (no se probo para no tocar la carpeta `.ssh` de este PC).

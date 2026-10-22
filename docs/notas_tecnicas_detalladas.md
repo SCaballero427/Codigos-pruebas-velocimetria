@@ -1413,7 +1413,14 @@ on the PC). `stiv.conf.ejemplo` now runs the day clip paced, looped, with `--web
 the live view as soon as it boots; `stiv.sh directo|directo-noche|web`. Checked on the PC (isolated
 copy, so no rows reached `salidas/myoshoji/`): 50.0 s of flow in 50.0 s of clock, 3.4 ms/frame, 89 ms
 per measurement, MJPEG ~4.5 img/s, page rendered by headless Edge with every card and 9 station rows.
-Not yet run on the Pi.
+**On the real Pi 4B (2026-10-22**, Raspberry Pi OS Lite 64-bit trixie booted from a USB stick, service
+with the default `stiv.conf`, 60 s recorded while watching, `salidas_raspberry/visor_web_20261022/`):
+keeps real time (29.3-31.4 fps, x1.00), **11.9 ms/frame** in the main thread (budget 33),
+**~475 ms per measurement** (every 5 s; PC 89 ms), drawing the web composite **~79 ms** so the viewer
+gets ~3.3 img/s, process CPU ~173 % of one core = ~43 % of the whole board (system 44 %; at the
+user's request the viewer now reports the process as % of the whole, 0-100), RSS ~400 MB, 59-68 C,
+`get_throttled` 0x0. Same numbers as the PC (0.490 m/s, 6/9). The board reports 7.8 GB RAM (an 8 GB
+model). Install took ~50 min, almost all `apt` unpacking ffmpeg's ~200 packages onto a slow stick.
 
 That test bench is kept, reproducible, in **`pruebas_docker/`** (deliberately *outside* `raspberry/`,
 whose contents all ship to the Pi): `pi_falsa/Dockerfile` (Debian 13 arm64, systemd, dbus, sshd,
