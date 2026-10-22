@@ -28,7 +28,7 @@ formulas (F1-F14) estan en la cabecera del script.
 
 | Archivo | Datos que se usan |
 |---|---|
-| `Medidas_canal_y_puente.pdf` | 11.4 m entre bordes, 3 m de la plantilla al puente, puente de 0.85 m |
+| `Medidas_canal_y_puente.pdf` | 11.4 m entre bordes, 3 m de la plantilla (fondo del canal) al borde inferior del puente, puente de 0.85 m |
 | `DS-2CD3646G2T-IZS_TPM_Datasheet_20261204.pdf` | sensor 1/1.8", 2688 x 1520, lente 2.7-13.5 mm, 30 fps (60 Hz) o 25 fps (50 Hz) |
 
 **Los FOV de la ficha no se usan**: son incoherentes entre si (con pixel cuadrado,
@@ -50,7 +50,10 @@ No estan medidos y cambian los resultados; hay que sustituirlos por medidas de c
 | Umbrales de calificacion | angulo 20-70 / 10-80 grados, trazador 2/1 px, linea 60/30 px | criterio propio, no norma |
 | Dibujo de la pasarela | piso 1.2 m, baranda 1.1 m, paneles 0.85 m | solo el dibujo |
 
-Tambien es una interpretacion que los 11.4 m son de borde a borde y los 3 m la altura de los bordes.
+Los 3 m se miden desde la plantilla (el fondo del canal, no la superficie del agua) hasta el borde
+inferior del puente. Es una
+interpretacion que los 11.4 m son de borde a borde y que el puente apoya sobre los bordes, asi que
+los bordes tambien quedan a 3 m de la plantilla.
 
 ## Resultado con los valores iniciales (2.7 mm, 30 fps)
 

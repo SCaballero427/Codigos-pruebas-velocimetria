@@ -837,7 +837,6 @@ def informe(q, a, aviso=None):
     add = L.append
     cam, cob, lineas = a["cam"], a["cob"], a["lineas"]
     T, B = anchos(q)
-    Hw = q["zcam"] - q["tirante"]
     validas = [ln for ln in lineas if ln["vel"]]
 
     add("1. CAMARA Y MONTAJE                            (F1, F2, F13)")
@@ -851,12 +850,12 @@ def informe(q, a, aviso=None):
     add("   IFOV H / V            : %.3f / %.3f mrad"
         % (ifov_mrad(q["fov_h"], q["res_h"]), ifov_mrad(q["fov_v"],
                                                         q["res_v"])))
-    add("   Camara                : %.2f m sobre el fondo, %.2f m sobre el agua,"
-        " %+.2f m del eje" % (q["zcam"], Hw, q["ycam"]))
+    add("   Camara                : %.2f m sobre el fondo del canal,"
+        " %+.2f m del eje" % (q["zcam"], q["ycam"]))
     if "h_puente" in q:
-        add("   En el puente          : piso a %.2f m de la plantilla, camara"
-            " %.2f m por encima del piso"
-            % (q["hc"] + q["h_puente"], q["h_mastil"]))
+        add("   Altura sobre el fondo : %.2f (plantilla al borde inferior del"
+            " puente) + %.2f (puente) + %.2f (camara sobre el piso) = %.2f m"
+            % (q["hc"], q["h_puente"], q["h_mastil"], q["zcam"]))
     add("   Mira hacia            : %s" % q["mira"])
     add("   Inclinacion / giro    : %.1f / %+.1f grados  (%s)"
         % (q["incl"], q["giro"], "apuntado automatico al centro de la seccion"
@@ -864,9 +863,10 @@ def informe(q, a, aviso=None):
 
     add("")
     add("2. CANAL                                       (F5)")
-    add("   Trapecio: plantilla %.2f m, talud %.2f:1, bordes a %.2f m"
+    add("   Trapecio: plantilla %.2f m, talud %.2f:1, bordes (y borde"
+        " inferior del puente) a %.2f m de la plantilla"
         % (q["b"], q["m"], q["hc"]))
-    add("   Tirante %.2f m -> ancho de agua %.2f m, area mojada %.2f m2;"
+    add("   Tirante supuesto %.2f m -> ancho de agua %.2f m, area mojada %.2f m2;"
         " borde a borde %.2f m"
         % (q["tirante"], T, (q["b"] + q["m"] * q["tirante"]) * q["tirante"], B))
 
@@ -1117,16 +1117,18 @@ ENTRADAS_CAMARA = [
     ("fps", "Imagenes por segundo (fps)", "30", float),
 ]
 # Canal y puente de entradas/Medidas_canal_y_puente.pdf: 11.4 m entre bordes
-# con el tirante maximo, 3 m de la plantilla al arranque del puente y 0.85 m
-# de altura del puente.
+# con el tirante maximo, 3 m de la plantilla (fondo del canal, no la
+# superficie del agua) al borde inferior del puente y 0.85 m de altura del
+# puente. El puente apoya sobre los bordes, asi que hc es a la vez la altura
+# de los bordes y la del borde inferior del puente sobre la plantilla.
 # >>> AJUSTABLE <<< Sin medir: el talud (1.5:1 es un valor tipico; de el sale
 # la plantilla), el tirante de operacion (2.0 m), la posicion lateral de la
 # camara (centro del claro) y la distancia minima de las lineas al puente.
 ENTRADAS_CANAL = [
     ("ancho_bordes", "Ancho entre bordes (m)", "11.4", float),
     ("m", "Talud (horizontal por 1 vertical)", "1.5", float),
-    ("hc", "Altura de los bordes sobre la plantilla (m)", "3", float),
-    ("tirante", "Tirante del agua (m)", "2.0", float),
+    ("hc", "Plantilla al borde inferior del puente (m)", "3", float),
+    ("tirante", "Tirante supuesto del agua (m)", "2.0", float),
 ]
 ENTRADAS_MONTAJE = [
     ("h_puente", "Altura del puente sobre los bordes (m)", "0.85", float),
@@ -1697,7 +1699,9 @@ class App:
         c.create_line(X(x_min), Z(q["hc"]), X(x_max), Z(q["hc"]),
                       fill="#999", dash=(4, 3))
         c.create_text(X(x_max) - 2, Z(q["hc"]) - 7, anchor="e",
-                      text="bordes", font=("TkDefaultFont", 7), fill="#777")
+                      text="bordes y borde inferior del puente: %.2f m sobre"
+                      " la plantilla" % q["hc"], font=("TkDefaultFont", 7),
+                      fill="#777")
         # Pasarela en corte: una armadura a cada lado del piso, arriostradas
         # en X, y la baranda encima de cada armadura.
         z0, z1 = q["hc"], q["hc"] + hp
@@ -1737,8 +1741,8 @@ class App:
         c.create_rectangle(X(0) - 6, Z(q["zcam"]) - 4, X(0) + 6,
                            Z(q["zcam"]) + 4, fill="#333", outline="")
         c.create_text(X(0) + 10, Z(q["zcam"]) - 2, anchor="w",
-                      text="%.2f m sobre el agua, inclinacion %.1f grados"
-                      % (q["zcam"] - d, q["incl"]),
+                      text="%.2f m sobre el fondo, inclinacion %.1f grados"
+                      % (q["zcam"], q["incl"]),
                       font=("TkDefaultFont", 8))
         c.create_text(X(-ANCHO_PISO / 2), Z(z_mano) - 9, text="puente",
                       font=("TkDefaultFont", 7), fill=COLOR_PUENTE)
