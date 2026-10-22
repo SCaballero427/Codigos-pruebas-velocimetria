@@ -1,0 +1,265 @@
+{
+  "video": "datos\\canal_riego\\WhatsApp Video 2026-08-16 at 8.07.12 PM.mp4",
+  "n_frames": 2429,
+  "fps": 29.97531879884821,
+  "geometria": {
+    "focal": 780.0,
+    "orilla_izq": [
+      -1.0745460764048955,
+      461.9045756688032
+    ],
+    "orilla_der": [
+      0.9874296822077576,
+      571.3901275292312
+    ],
+    "punto_fuga": [
+      518.960178618182,
+      -53.09740010430217
+    ],
+    "inclinacion_grados": 23.619968511367667,
+    "ancho_canal_alturas_camara": 2.250516992669585,
+    "X_izq": -1.1493089176744404,
+    "X_der": 1.101208074995145,
+    "estaciones_X": [
+      -1.0493089176744403,
+      -0.9028434181980414,
+      -0.7563779187216424,
+      -0.6099124192452435,
+      -0.46344691976884456,
+      -0.3169814202924456,
+      -0.17051592081604672,
+      -0.024050421339647743,
+      0.12241507813675123,
+      0.2688805776131502,
+      0.4153460770895492,
+      0.5618115765659482,
+      0.7082770760423469,
+      0.8547425755187459,
+      1.0012080749951449
+    ]
+  },
+  "stiv": {
+    "v_esperada": 0.056,
+    "Y_min": 1.4,
+    "Y_max": 3.2,
+    "banda": 0.1,
+    "n_lineas": 11,
+    "DS": 0.0018682036503362151,
+    "n_muestras": 963,
+    "lado_bloque": 64,
+    "solape": 0.5,
+    "sigma_tensor": 1.2,
+    "cuantil_senal": 0.85,
+    "coh_min": 0.6,
+    "densidad_min": 0.004,
+    "densidad_max": 0.05,
+    "umbral_particula": 4.0,
+    "v_max_fisica": 0.168,
+    "ventana": 360,
+    "paso": 15,
+    "n_ventanas": 138
+  },
+  "medida_81s": [
+    {
+      "estacion": 0,
+      "X": -1.0493089176744403,
+      "densidad": 0.010232022459661233,
+      "coherencia": 0.5801957845687866,
+      "v_alturas_camara_s": 0.7551043319702148,
+      "motivos": [
+        "coherencia",
+        "v_no_fisica"
+      ]
+    },
+    {
+      "estacion": 1,
+      "X": -0.9028434181980414,
+      "densidad": 0.0003894615384286531,
+      "coherencia": 0.5273200273513794,
+      "v_alturas_camara_s": 0.022504483699798586,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 2,
+      "X": -0.7563779187216424,
+      "densidad": 1.3680317485968055e-05,
+      "coherencia": 0.31788885593414307,
+      "v_alturas_camara_s": 0.00017118353769183156,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 3,
+      "X": -0.6099124192452435,
+      "densidad": 2.693312505049961e-05,
+      "coherencia": 0.4048633873462677,
+      "v_alturas_camara_s": 0.00033592865616083144,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 4,
+      "X": -0.46344691976884456,
+      "densidad": 2.3513045679007594e-05,
+      "coherencia": 0.3591780364513397,
+      "v_alturas_camara_s": 0.0009723047763109207,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 5,
+      "X": -0.3169814202924456,
+      "densidad": 1.7955416700333073e-05,
+      "coherencia": 0.38316476345062256,
+      "v_alturas_camara_s": 0.000434045810252428,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 6,
+      "X": -0.17051592081604672,
+      "densidad": 9.405218271603038e-06,
+      "coherencia": 0.3508021831512451,
+      "v_alturas_camara_s": 0.005996167778968811,
+      "motivos": [
+        "sin_trazador",
+        "coherencia"
+      ]
+    },
+    {
+      "estacion": 7,
+      "X": -0.024050421339647743,
+      "densidad": 0.00018126420668907673,
+      "coherencia": 0.3941168189048767,
+      "v_alturas_camara_s": -0.0022034870982170105,
+      "motivos": [
+        "sin_trazador",
+        "coherencia",
+        "sentido"
+      ]
+    },
+    {
+      "estacion": 8,
+      "X": 0.12241507813675123,
+      "densidad": 0.006330994426553154,
+      "coherencia": 0.7065029740333557,
+      "v_alturas_camara_s": 0.05851518440246582,
+      "motivos": []
+    },
+    {
+      "estacion": 9,
+      "X": 0.2688805776131502,
+      "densidad": 0.00575342852269244,
+      "coherencia": 0.656438410282135,
+      "v_alturas_camara_s": 0.06345064449310302,
+      "motivos": []
+    },
+    {
+      "estacion": 10,
+      "X": 0.4153460770895492,
+      "densidad": 0.010416706745721802,
+      "coherencia": 0.820263147354126,
+      "v_alturas_camara_s": 0.06460035037994385,
+      "motivos": []
+    },
+    {
+      "estacion": 11,
+      "X": 0.5618115765659482,
+      "densidad": 0.013561042217887271,
+      "coherencia": 0.7967178821563721,
+      "v_alturas_camara_s": 0.05944013881683349,
+      "motivos": []
+    },
+    {
+      "estacion": 12,
+      "X": 0.7082770760423469,
+      "densidad": 0.014957289621298886,
+      "coherencia": 0.7294861078262329,
+      "v_alturas_camara_s": 0.043117495536804204,
+      "motivos": []
+    },
+    {
+      "estacion": 13,
+      "X": 0.8547425755187459,
+      "densidad": 0.019693672040893888,
+      "coherencia": 0.697748064994812,
+      "v_alturas_camara_s": 0.027910114765167235,
+      "motivos": []
+    },
+    {
+      "estacion": 14,
+      "X": 1.0012080749951449,
+      "densidad": 0.07778714024505724,
+      "coherencia": 0.6738389134407043,
+      "v_alturas_camara_s": 0.018470751523971558,
+      "motivos": [
+        "orilla"
+      ]
+    }
+  ],
+  "estaciones_medidas": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "estaciones_deducidas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "estaciones_rechazadas": [
+    0,
+    14
+  ],
+  "modelo_seccion": {
+    "tipo": "Shiono-Knight, pared en las orillas detectadas",
+    "Gamma": 0.050000087007878675,
+    "eje": -0.024050421339647743,
+    "semiancho": 1.1252584963347925,
+    "sigma_bamboleo": 0.13608359858211075,
+    "autocorrelacion": 0.9301641140875765,
+    "recorte": [
+      -0.18757849817923344,
+      0.1966189076389726
+    ],
+    "semilla": 20260821
+  },
+  "escala": {
+    "ANCHO_LAMINA_M_SUPUESTO": 5.0,
+    "m_por_altura_camara": 2.221711729476413,
+    "mm_por_px_panel_rectificado": 6.732459786292161
+  },
+  "resultado": {
+    "v_mediana_seccion_ms": 0.1377476682569781,
+    "q05": 0.10454432649126474,
+    "q95": 0.17814928126311252,
+    "v_mediana_solo_medidas_ms": 0.13284063817299208,
+    "v_mediana_81s_alturas_camara_s": 0.05897766160964966
+  },
+  "video_salida": {
+    "ruta": "salidas/velocidad_tiempo_real.mp4",
+    "ancho": 1920,
+    "alto": 770,
+    "escala_rect": 330.0,
+    "v_color_max": 0.2,
+    "px_por_ms": 900
+  }
+}

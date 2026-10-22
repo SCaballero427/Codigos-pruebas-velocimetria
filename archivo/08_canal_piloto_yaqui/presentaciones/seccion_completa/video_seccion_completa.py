@@ -51,8 +51,8 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 
 _RAIZ = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # raiz del proyecto
-sys.path.insert(0, os.path.join(_RAIZ, "casos", "08_canal_riego", "medicion"))
-sys.path.insert(0, os.path.join(_RAIZ, "casos", "08_canal_riego", "completo_con_modelo"))
+sys.path.insert(0, os.path.join(_RAIZ, "archivo", "08_canal_piloto_yaqui", "medicion"))
+sys.path.insert(0, os.path.join(_RAIZ, "archivo", "08_canal_piloto_yaqui", "completo_con_modelo"))
 import escritor_video as ev        # noqa: E402
 import stiv_canal as sc            # noqa: E402
 import video_velocidad as vv       # noqa: E402
@@ -60,7 +60,7 @@ import simulacion_canal as sim     # noqa: E402
 
 DIR_CASO = os.path.dirname(os.path.abspath(__file__))
 DIR_SALIDAS = os.path.join(DIR_CASO, "salidas")
-CFG_PERFIL = os.path.join(_RAIZ, "casos", "08_canal_riego", "completo_con_modelo", "salidas",
+CFG_PERFIL = os.path.join(_RAIZ, "archivo", "08_canal_piloto_yaqui", "completo_con_modelo", "salidas",
                           "config_simulacion.json")
 
 # ----------------------------------------------------------------------------------

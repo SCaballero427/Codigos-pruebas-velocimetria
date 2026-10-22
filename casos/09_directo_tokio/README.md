@@ -64,6 +64,10 @@ Sin `fuentes.json` (p. ej. en la Raspberry, adonde no viaja) la lista son las ca
   `--camara <nombre>`. RTSP va por TCP, con 15 s de tiempo de espera y reconexion automatica.
 - `--paso-medida S` (segundos entre medidas, 1 por defecto) y `--vista-cada S` (sin ventana: guarda
   `ultima_vista.png` cada S s) existen sobre todo para la Raspberry Pi.
+- `--web PUERTO` sirve el directo anotado (MJPEG) y las metricas de rendimiento y del equipo (fps,
+  cola, ms por fotograma y por medida, CPU, RAM, temperatura, frenado) a cualquier navegador de la red;
+  `--tiempo-real --bucle` reproduce un `--archivo` a su velocidad y sin fin, como un directo. Son para
+  ver una Raspberry sin pantalla (ver [raspberry/LEEME.md](raspberry/LEEME.md), paso 6).
 - Si YouTube responde "Sign in to confirm you're not a bot" (le paso a este PC el 2026-10-12),
   `STIV_COOKIES=ruta\cookies.txt` le pasa a yt-dlp las cookies de un navegador con sesion.
 

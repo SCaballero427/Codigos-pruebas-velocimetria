@@ -44,7 +44,7 @@ medicion_caudal_por_video/
 |   |-- 05_hommerich_stiv/       STIV metrico con camara calibrada (Paises Bajos)
 |   |-- 06_bradano_stiv/         STIV sobre video ya ortorrectificado (Italia)
 |   |-- 07_arrow_siembra/        experimento: el mismo rio con y sin trazador sembrado
-|   |-- 08_canal_riego/          familia de 6 carpetas sobre un video de WhatsApp (ver su README)
+|   |-- 08_canal_piloto_yaqui/   STIV sobre un video de movil de WhatsApp, un solo notebook
 |   `-- 09_directo_tokio/        programa en tiempo real sobre camaras en directo + Raspberry Pi
 |
 |-- herramientas/              scripts sueltos reutilizables (estabilizar, convertir, marcar puntos, ffmpeg)
@@ -53,7 +53,7 @@ medicion_caudal_por_video/
 |   `-- externos/              aqui va la carpeta de datasets de 46 GB (no copiada, ver LEEME.md)
 |-- pendientes/                casos que tienen datos pero no tienen pipeline (Castor River, RIVeR)
 |-- referencias/               copia de la libreria pyorc original, solo para consulta
-`-- archivo/                   restos y pruebas de usar y tirar, guardados por si acaso
+`-- archivo/                   restos y versiones anteriores (p. ej. el caso 08 en 7 subcarpetas)
 ```
 
 ---
@@ -69,25 +69,26 @@ medicion_caudal_por_video/
 | 05 | `casos/05_hommerich_stiv` | STIV propio | oblicua, calibrada, 6 GCPs | caudal | **13.68 m3/s** | ninguna disponible | `video_velocidad.py` |
 | 06 | `casos/06_bradano_stiv` | STIV propio | dron, ya ortorrectificado | velocidad m/s | 5 de 7 verticales, **sesgo -3.1 %**, r = 0.996 | velocidades HARMONIOUS | `Bradano_STIV_pipeline.ipynb` |
 | 07 | `casos/07_arrow_siembra` | STIV propio (experimento) | GoPro en mastil, con y sin siembra | si el metodo mide o no | sin siembra: **0 de 49** estaciones; con siembra: media -6.7 % | velocidades HARMONIOUS + PIV arbitro | `Arrow_STIV_pipeline.ipynb` |
-| 08 | `casos/08_canal_riego` | STIV propio | movil, WhatsApp, sin ningun dato de campo | velocidad en unidades relativas | **0.0590 alturas de camara/s**, 6 de 15 estaciones | arbitro PTV propio, r = 0.984 | `medicion/stiv_canal.py` |
+| 08 | `casos/08_canal_piloto_yaqui` | STIV propio | movil, WhatsApp, sin ningun dato de campo | velocidad (m/s con ancho supuesto) | **0.0590 alturas de camara/s**, 6 de 15 estaciones | arbitro PTV propio, r = 0.984 (version archivada) | `Canal_piloto_Yaqui_pipeline.ipynb` |
 | 09 | `casos/09_directo_tokio` | STIV propio, en directo | camaras de rio de Tokio en YouTube | velocidad m/s cada segundo | Myoshoji de dia: **0.48 m/s** mediana | nivel oficial + aforos historicos; el mismo codigo validado con los videos de 03 (Q +1.2 %) y 06 | `arrancar.bat` |
 
 Lo que distingue a cada caso no es el rio sino **que informacion falta**: con geometria completa se
 llega al caudal (01, 02, 03, 05); sin ella solo a la velocidad (04, 06, 08); y 07 demuestra cuando
 el video no tiene nada que medir.
 
-### La familia del canal de riego (`casos/08_canal_riego/`)
+### El canal piloto Yaqui (`casos/08_canal_piloto_yaqui/`)
 
-Seis carpetas sobre el **mismo video**. Solo `medicion/` es el caso; las demas importan su codigo.
+Un solo notebook, `Canal_piloto_Yaqui_pipeline.ipynb`, hace todo el caso paso a paso y termina
+escribiendo el video con el formato del Bradano (vista de la camara y plano rectificado, a color).
+Ojo: el video **no dice en pantalla** que 7 de las 13 flechas son deducidas por un modelo ni que
+los m/s dependen de un ancho de canal supuesto (5 m); el notebook y su README si.
 
-| Subcarpeta | Tipo | Que responde |
-|---|---|---|
-| `medicion/` | caso | la medida STIV, el arbitro PTV y el video de velocidad |
-| `completo_con_modelo/` | caso + simulacion | error por estacion y un modelo Shiono-Knight para el 64 % del ancho sin trazador |
-| `experimentos/alcance/` | experimento | hasta que distancia de la camara se puede medir (aliasing) |
-| `experimentos/filtro/` | experimento | ultimo intento sobre el campo lejano; la causa es la resolucion, no la compresion |
-| `presentaciones/stiv_puro/` | video | solo lo medido, con huecos donde no se mide |
-| `presentaciones/seccion_completa/` | video | flechas de orilla a orilla (9 de 15 deducidas, sin aviso en pantalla; leer su README) |
+La version anterior, en siete subcarpetas (arbitro PTV, experimentos de alcance y de filtro,
+modelo de seccion y tres videos), esta en `archivo/08_canal_piloto_yaqui/`.
+
+`casos/08_canal_piloto_yaqui/simulador_camara_puente/` simula una camara fija en el puente del
+canal (encuadre, cm/px y angulo de la STI) para decidir el montaje antes de instalarla. Solo
+necesita Python con tkinter: `python simulador_stiv_puente.py`.
 
 ---
 
@@ -149,12 +150,13 @@ rutas del codigo ya estan actualizadas** y verificadas.
 | `analisis_hommerich_stiv/` | `casos/05_hommerich_stiv/` |
 | `analisis_bradano_stiv/` | `casos/06_bradano_stiv/` |
 | `analisis_arrow_stiv/` | `casos/07_arrow_siembra/` |
-| `analisis_canal_riego_stiv/` | `casos/08_canal_riego/medicion/` |
-| `analisis_canal_completo_stiv/` | `casos/08_canal_riego/completo_con_modelo/` |
-| `analisis_canal_lejano_stiv/` | `casos/08_canal_riego/experimentos/alcance/` |
-| `analisis_canal_filtro_adaptado/` | `casos/08_canal_riego/experimentos/filtro/` |
-| `analisis_canal_stiv_puro/` | `casos/08_canal_riego/presentaciones/stiv_puro/` |
-| `analisis_canal_seccion_completa/` | `casos/08_canal_riego/presentaciones/seccion_completa/` |
+| `analisis_canal_riego_stiv/` | `archivo/08_canal_piloto_yaqui/medicion/` |
+| `analisis_canal_completo_stiv/` | `archivo/08_canal_piloto_yaqui/completo_con_modelo/` |
+| `analisis_canal_lejano_stiv/` | `archivo/08_canal_piloto_yaqui/experimentos/alcance/` |
+| `analisis_canal_filtro_adaptado/` | `archivo/08_canal_piloto_yaqui/experimentos/filtro/` |
+| `analisis_canal_stiv_puro/` | `archivo/08_canal_piloto_yaqui/presentaciones/stiv_puro/` |
+| `analisis_canal_seccion_completa/` | `archivo/08_canal_piloto_yaqui/presentaciones/seccion_completa/` |
+| `casos/08_canal_riego/` | `casos/08_canal_piloto_yaqui/` (un notebook); sus subcarpetas, en `archivo/08_canal_piloto_yaqui/` |
 | `analisis_kurome_directo_stiv/` | `casos/09_directo_tokio/` |
 | `ngwerere/`, `USGS/` | `datos/ngwerere/`, `datos/USGS/` |
 | `videos/WhatsApp Video ... .mp4` | `datos/canal_riego/` |

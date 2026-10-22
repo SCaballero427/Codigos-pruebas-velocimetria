@@ -100,11 +100,21 @@ Espera un minuto, vuelve a entrar y comprueba: `./raspberry/stiv.sh estado` tien
 **`active (running)`**. Desde ahi arranca en cada encendido y, si el programa se cae (camara caida,
 sin red, video de prueba terminado), systemd lo vuelve a lanzar a los 15 s.
 
-Con el `stiv.conf` de ejemplo el servicio procesa el video de prueba una y otra vez. Para medir de
-verdad, cambia la linea `STIV_ARGS` (paso siguiente o seccion "Usar tu camara").
+Con el `stiv.conf` de ejemplo el servicio procesa el video de prueba una y otra vez, a su velocidad
+real (`--tiempo-real --bucle`) y con el visor web (`--web 8080`, paso 6). Para medir de verdad,
+cambia la linea `STIV_ARGS` (paso siguiente o seccion "Usar tu camara").
 
 ## Paso 6 - Ver lo que mide
 
+- **En el navegador del PC, en directo**: con el `stiv.conf` de ejemplo el servicio arranca con
+  `--web 8080`, asi que basta abrir **`http://raspberrypi.local:8080`** (o `http://IP_DE_LA_PI:8080`;
+  `./raspberry/stiv.sh web` dice las dos). Se ve el video anotado (directo + vista rectificada + STI de
+  cada estacion, ~5 imagenes/s) y, al lado, las metricas renovadas cada segundo con su grafica de los
+  ultimos 2 minutos: fps de proceso frente a los de la fuente, cola, ms por fotograma y por medida,
+  CPU y RAM del programa y del equipo, temperatura, frecuencia de la CPU, frenado por calor o fuente
+  (`get_throttled`), carga y disco; y la mediana y la tabla de las 9 estaciones. La imagen solo se
+  dibuja mientras alguien mira: con la pestana cerrada no le quita CPU a la medida.
+  `./raspberry/stiv.sh directo` (o `directo-noche`) hace lo mismo a mano, en primer plano.
 - En la Pi: `./raspberry/stiv.sh medidas` (ultimas filas del CSV) o `./raspberry/stiv.sh registro`
   (lo que imprime, en vivo; `Ctrl+C` sale y el programa sigue).
 - En el PC: doble clic en **`traer_resultados.bat`**. Deja en `salidas_raspberry\` el CSV, la
@@ -125,6 +135,8 @@ verdad, cambia la linea `STIV_ARGS` (paso siguiente o seccion "Usar tu camara").
 | `prueba [n]` | prueba de rendimiento con el video incluido (de dia) |
 | `prueba-noche` | lo mismo con el video de noche (modo noche, escalas lentas) |
 | `prueba-conf [s]` | ejecutar s segundos (60) con lo que diga `stiv.conf` |
+| `directo` / `directo-noche` | el video de prueba a velocidad real, en bucle, con el visor web en el 8080 |
+| `web` | la direccion del visor web del servicio |
 
 Para **cambiar el codigo**: editalo en el PC, y `subir_a_raspberry.bat -SinInstalar` (copia y
 reinicia el servicio en segundos).

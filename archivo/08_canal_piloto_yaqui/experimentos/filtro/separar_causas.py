@@ -8,7 +8,7 @@ donde se sabe que hay trazador de sobra.
 import csv, os, subprocess, sys
 import cv2, numpy as np
 _R = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # raiz del proyecto
-sys.path.insert(0, os.path.join(_R, "casos", "08_canal_riego", "medicion"))
+sys.path.insert(0, os.path.join(_R, "archivo", "08_canal_piloto_yaqui", "medicion"))
 import stiv_canal as sc
 import filtro_adaptado as fa
 import escalera_honesta as eh
