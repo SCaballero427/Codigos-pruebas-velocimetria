@@ -1,0 +1,135 @@
+{
+ "variante": "nuevo",
+ "camara": "akigawa",
+ "tramo": "2026-10-24T17:10",
+ "inicio_jst": "2026-10-24T17:09:57+09:00",
+ "modos": [
+  "noche"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 1,
+ "mediana": 0.7624796992064782,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 1,
+   "v": 0.7624796992064782,
+   "q25": 0.7624796992064782,
+   "q75": 0.7624796992064782,
+   "coh": 0.5002253512280996,
+   "escalas": "m",
+   "motivos": {
+    "coherencia": 67,
+    "ambiguo": 53
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 115,
+    "v_max": 6
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116,
+    "v_max": 5
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  }
+ ],
+ "segundos_proceso": 254
+}

@@ -1,0 +1,5 @@
+etapa,segundos,cpu_s,nucleos,ram_pico_mb,ram_neta_mb,n_frames,pct_tiempo
+Parte 4: construir las STI,45.81,58.34,1.27,270.7,20.3,600.0,99.1
+Parte 4: preparar STI + tensor de estructura,0.43,0.38,0.87,239.5,2.1,,0.9
+Parte 4b: control de calidad,0.0,0.0,0.0,245.9,0.0,,0.0
+Parte 5: perfil transversal,0.0,0.0,0.0,243.0,0.0,,0.0

@@ -14,8 +14,8 @@ Solo usa la biblioteca estandar de Python 3 (tkinter incluido). No necesita el e
 
 ## Que responde
 
-1. **Cobertura**: si se ve el ancho de agua entero y el canal de borde a borde, y en que tramo
-   desde el puente.
+1. **Cobertura**: si se ve el canal de borde a borde, y en que tramo desde el puente. No usa el
+   ancho de agua (ancho de lamina): depende del nivel real, que no se conoce.
 2. **Resolucion en el agua** (cm/px), a lo largo del flujo y a lo ancho, en cada linea de busqueda.
 3. **Chequeo STIV**: desplazamiento en px/imagen y angulo del patron en la STI para la velocidad
    minima y maxima, error de velocidad, y que paso de imagenes k, fps o S_x hacen falta.
@@ -28,7 +28,7 @@ formulas (F1-F14) estan en la cabecera del script.
 
 | Archivo | Datos que se usan |
 |---|---|
-| `Medidas_canal_y_puente.pdf` | 11.4 m entre bordes, 3 m de la plantilla al puente, puente de 0.85 m |
+| `Medidas_canal_y_puente.pdf` | 11.4 m entre bordes, 3 m de la plantilla (fondo del canal) al borde inferior del puente, puente de 0.85 m |
 | `DS-2CD3646G2T-IZS_TPM_Datasheet_20261204.pdf` | sensor 1/1.8", 2688 x 1520, lente 2.7-13.5 mm, 30 fps (60 Hz) o 25 fps (50 Hz) |
 
 **Los FOV de la ficha no se usan**: son incoherentes entre si (con pixel cuadrado,
@@ -42,27 +42,31 @@ No estan medidos y cambian los resultados; hay que sustituirlos por medidas de c
 
 | Valor | Supuesto | Efecto |
 |---|---|---|
-| Talud | 1.5:1 | de el sale la plantilla: 11.4 - 2 x 1.5 x 3 = 2.40 m |
-| Tirante de operacion | 2.0 m | ancho de agua 8.40 m |
+| Talud | 1.5:1 | de el sale la plantilla: 11.4 - 2 x 1.5 x 3 = 2.40 m, donde van las lineas de busqueda |
+| Tirante | 2.0 m | solo fija el plano del agua para la resolucion y el STIV; el ancho de agua no se usa |
 | Camara sobre el piso del puente | 1.0 m | 4.85 m sobre la plantilla |
 | Posicion | centro del claro, mirando aguas arriba | |
 | Pixel del sensor | 2.9 um | FOV calculado |
 | Umbrales de calificacion | angulo 20-70 / 10-80 grados, trazador 2/1 px, linea 60/30 px | criterio propio, no norma |
 | Dibujo de la pasarela | piso 1.2 m, baranda 1.1 m, paneles 0.85 m | solo el dibujo |
 
-Tambien es una interpretacion que los 11.4 m son de borde a borde y los 3 m la altura de los bordes.
+Los 3 m se miden desde la plantilla (el fondo del canal, no la superficie del agua) hasta el borde
+inferior del puente. Es una
+interpretacion que los 11.4 m son de borde a borde y que el puente apoya sobre los bordes, asi que
+los bordes tambien quedan a 3 m de la plantilla.
 
 ## Resultado con los valores iniciales (2.7 mm, 30 fps)
 
-- Seccion de medida a 3.5 m del puente, camara inclinada 39.2 grados.
-- Ancho de agua entero visible desde 1.4 m; el borde superior de la imagen llega al horizonte.
-- 0.72 cm/px a lo largo del flujo en la linea central.
-- 0.1 m/s queda a 15 grados en la STI y 2 m/s a 80: con un solo ajuste no se cubre todo el rango;
-  para 2 m/s hace falta S_x >= 2.4 cm/px o mas fps, y para 0.1 m/s un paso k de ~3.
+- Seccion de medida a 3.7 m del puente, camara inclinada 37.8 grados.
+- Canal entero de borde a borde visible desde 3.6 m; el borde superior de la imagen llega al
+  horizonte.
+- 0.76 cm/px a lo largo del flujo en la linea central.
+- 0.1 m/s queda a 15 grados en la STI y 2 m/s a 79: con un solo ajuste no se cubre todo el rango;
+  para 2 m/s hace falta S_x >= 2.4 cm/px o mas fps, y para 0.1 m/s un paso k de ~4.
 
-Con talud 1.0-2.0, tirante 0.5-2.8 m, camara 0.5-1.5 m sobre el piso, +-3 grados de error de
-instalacion o focal real 2.6-2.85 mm, las lineas siguen cabiendo y el ancho de agua se ve entero;
-la resolucion queda entre 0.68 y 0.92 cm/px.
+Con talud 1.0-1.75, tirante 0.5-2.8 m y camara 0.5-1.5 m sobre el piso siempre hay una seccion con
+el canal entero de borde a borde y las lineas enteras; la resolucion en la linea central queda
+entre 0.71 y 1.04 cm/px. Con talud 2.0 la plantilla no tendria ancho (11.4 - 2 x 2 x 3 < 0).
 
 ## Verificacion
 

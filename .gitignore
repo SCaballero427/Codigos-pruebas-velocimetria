@@ -44,3 +44,6 @@ cookies*.txt
 # Fotogramas extraidos del video para RIVeR (se regeneran desde el video; los resultados .txt si van)
 /casos/02_smc_pyorc/entradas/**/SMC_estabilizado_previsualizacion_*.jpg
 /pendientes/RIVeR-STIV_1.0/RIVeR_Example/GOPR3225_Trim_*.jpg
+
+# Clips de la campana de 24 h (segmentos .ts del directo, 1.8 GB): se rehacen con noche_24h/tramo.py
+/casos/09_directo_tokio/noche_24h/clips/

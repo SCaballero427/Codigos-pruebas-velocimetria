@@ -1,0 +1,21 @@
+{
+  "video": "..\\..\\casos\\02_smc_pyorc\\entradas\\SMC_estabilizado.mkv",
+  "n_frames": 250,
+  "fps": 30.015,
+  "fila_agua_sup": 438,
+  "fila_agua_inf": 1463,
+  "ancho_canal_m": 1.8288,
+  "escala_m_px": 0.0017841951219512194,
+  "columna_ini": 600,
+  "columna_fin": 3400,
+  "angulo_flujo": -1.0,
+  "v_esperada": 0.95,
+  "ds_px": 18,
+  "sigma_antialias": 9.0,
+  "lado_bloque": 64,
+  "coh_min_bloque": 0.5,
+  "sigma_derivada": 1.5,
+  "coh_min_estacion": 0.7,
+  "v_corr": 0.92,
+  "caudal_m3s": 1.4484265662462377
+}

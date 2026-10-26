@@ -1,0 +1,139 @@
+{
+ "variante": "nuevo",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T21:00",
+ "inicio_jst": "2026-10-24T20:59:56+09:00",
+ "modos": [
+  "noche"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 0,
+ "mediana": null,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "noche_no_valida": 18,
+    "ambiguo+noche_no_valida": 95,
+    "noche_no_valida+v_max": 8
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo+noche_no_valida": 116,
+    "noche_no_valida+v_max": 5
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura+noche_no_valida": 121
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura+noche_no_valida": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura+noche_no_valida": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura+noche_no_valida": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "noche_no_valida": 119,
+    "ambiguo+noche_no_valida": 2
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo+noche_no_valida": 39,
+    "noche_no_valida": 67,
+    "noche_no_valida+v_max": 15
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "noche_no_valida": 41,
+    "ambiguo+noche_no_valida": 80
+   }
+  }
+ ],
+ "segundos_proceso": 3395
+}

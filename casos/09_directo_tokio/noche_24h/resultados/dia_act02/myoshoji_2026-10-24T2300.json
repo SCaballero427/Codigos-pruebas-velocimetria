@@ -1,0 +1,135 @@
+{
+ "variante": "dia_act02",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T23:00",
+ "inicio_jst": "2026-10-24T22:59:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 249,
+ "mediana": 0.054861037881410814,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 93,
+   "v": 0.05126672637973685,
+   "q25": 0.04764292799581089,
+   "q75": 0.057042357576779466,
+   "coh": 0.46209467717744035,
+   "escalas": "m",
+   "motivos": {
+    "ambiguo": 28
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 98,
+    "ambiguo": 23
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 36,
+   "v": 0.10744691713970643,
+   "q25": 0.07884999258957269,
+   "q75": 0.22502065467431775,
+   "coh": 0.4996968082012473,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 59,
+    "ambiguo": 26
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 88,
+   "v": 0.05869384681515455,
+   "q25": 0.053633408539407505,
+   "q75": 0.06098047979710051,
+   "coh": 0.46171481018707283,
+   "escalas": "m",
+   "motivos": {
+    "ambiguo": 33
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 32,
+   "v": 0.051462002382201395,
+   "q25": 0.04973468962210817,
+   "q75": 0.05237579965675932,
+   "coh": 0.43314771950931374,
+   "escalas": "m",
+   "motivos": {
+    "coherencia": 53,
+    "ambiguo": 36
+   }
+  }
+ ],
+ "segundos_proceso": 277
+}

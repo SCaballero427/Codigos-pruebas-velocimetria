@@ -1,0 +1,132 @@
+{
+ "variante": "nuevo",
+ "camara": "akigawa",
+ "tramo": "2026-10-24T23:00",
+ "inicio_jst": "2026-10-24T22:59:59+09:00",
+ "modos": [
+  "noche"
+ ],
+ "n_medidas": 116,
+ "aceptadas": 0,
+ "mediana": null,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 116,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 116
+   }
+  }
+ ],
+ "segundos_proceso": 239
+}

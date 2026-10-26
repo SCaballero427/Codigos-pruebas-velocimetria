@@ -1,0 +1,131 @@
+{
+ "variante": "base",
+ "camara": "myoshoji",
+ "tramo": "2026-10-25T01:00",
+ "inicio_jst": "2026-10-25T00:59:59+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 323,
+ "mediana": 0.06725092726054657,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 10,
+   "v": 0.08290710150591951,
+   "q25": 0.07670377722907157,
+   "q75": 0.09541715844947948,
+   "coh": 0.5169722745794317,
+   "escalas": "L motas 10",
+   "motivos": {
+    "sin_textura": 111
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 1,
+   "v": 0.0998601388200711,
+   "q25": 0.0998601388200711,
+   "q75": 0.0998601388200711,
+   "coh": 0.500605578525986,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 120
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 20,
+   "v": 0.07345518108485122,
+   "q25": 0.06896593307697758,
+   "q75": 0.08179718902837343,
+   "coh": 0.5065336747245812,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 101
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 97,
+   "v": 0.07013363304989316,
+   "q25": 0.06257093483925874,
+   "q75": 0.08167352920201529,
+   "coh": 0.5719210387688244,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 24
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 119,
+    "ambiguo": 2
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.06431050466440792,
+   "q25": 0.04971088106666167,
+   "q75": 0.07095461984921364,
+   "coh": 0.6154249874567211,
+   "escalas": "m",
+   "motivos": {}
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 74,
+   "v": 0.0508482967062426,
+   "q25": 0.048117619406974586,
+   "q75": 0.0750247271043481,
+   "coh": 0.5971533267098441,
+   "escalas": "L motas 55",
+   "motivos": {
+    "ambiguo": 47
+   }
+  }
+ ],
+ "segundos_proceso": 312
+}

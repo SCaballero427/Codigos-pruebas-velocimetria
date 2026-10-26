@@ -1,0 +1,138 @@
+{
+ "variante": "base",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T13:00",
+ "inicio_jst": "2026-10-24T13:00:00+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 146,
+ "mediana": 0.5304096981750157,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 106,
+    "coherencia": 15
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 68,
+    "coherencia": 53
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 20,
+   "v": 0.5477157251947569,
+   "q25": 0.5359850851580145,
+   "q75": 0.5703800060525167,
+   "coh": 0.4385741520272672,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 101
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 57,
+   "v": 0.597481724544334,
+   "q25": 0.5557775359618204,
+   "q75": 0.6266540548669874,
+   "coh": 0.4664538844994214,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 64
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 75,
+    "coherencia": 46
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 69,
+   "v": 0.06354627539873475,
+   "q25": 0.062337773346239155,
+   "q75": 0.06496791639819459,
+   "coh": 0.4374144788945746,
+   "escalas": "L motas 69",
+   "motivos": {
+    "ambiguo": 47,
+    "coherencia": 5
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 38,
+    "ambiguo": 79,
+    "coherencia": 4
+   }
+  }
+ ],
+ "segundos_proceso": 312
+}

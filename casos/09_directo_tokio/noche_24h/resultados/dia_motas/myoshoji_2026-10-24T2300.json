@@ -1,0 +1,136 @@
+{
+ "variante": "dia_motas",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T23:00",
+ "inicio_jst": "2026-10-24T22:59:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 231,
+ "mediana": 0.08261252130629877,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 72,
+    "sin_textura": 49
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 17,
+   "v": 0.07019937659896547,
+   "q25": 0.06584537758769646,
+   "q75": 0.07857534187822635,
+   "coh": 0.4239981054511052,
+   "escalas": "l motas 11",
+   "motivos": {
+    "sin_textura": 80,
+    "ambiguo": 24
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 81,
+   "v": 0.09184051606084839,
+   "q25": 0.08841370343566039,
+   "q75": 0.09428167002305873,
+   "coh": 0.5362898447613157,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 40
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 112,
+    "ambiguo": 9
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 75,
+   "v": 0.05511158446740191,
+   "q25": 0.05434367965515245,
+   "q75": 0.08786826588711127,
+   "coh": 0.6257648484187874,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 46
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 58,
+   "v": 0.06752799837754658,
+   "q25": 0.0635783701762295,
+   "q75": 0.0721035959462974,
+   "coh": 0.4589679788598141,
+   "escalas": "L motas 5",
+   "motivos": {
+    "sin_textura": 62,
+    "ambiguo": 1
+   }
+  }
+ ],
+ "segundos_proceso": 375
+}

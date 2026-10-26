@@ -1,0 +1,146 @@
+{
+ "variante": "nuevo",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T16:50",
+ "inicio_jst": "2026-10-24T16:49:59+09:00",
+ "modos": [
+  "dia",
+  "noche"
+ ],
+ "n_medidas": 111,
+ "aceptadas": 515,
+ "mediana": 0.506912759729447,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 111,
+   "aceptadas": 75,
+   "v": 0.4414116515019204,
+   "q25": 0.4200326495874114,
+   "q75": 0.4601777987044541,
+   "coh": 0.5637353016880511,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 20,
+    "coherencia+noche_no_valida": 14,
+    "lento_esperando+noche_no_valida": 2
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 111,
+   "aceptadas": 75,
+   "v": 0.5060445794009868,
+   "q25": 0.49951880910315727,
+   "q75": 0.5160978743639646,
+   "coh": 0.5611581468050354,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 36
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 111,
+   "aceptadas": 26,
+   "v": 0.7389930095433408,
+   "q25": 0.6331562246022173,
+   "q75": 0.8270044093457243,
+   "coh": 0.48354267912263216,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 5,
+    "ambiguo": 44,
+    "sin_textura_esperando+noche_no_valida": 36
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 111,
+   "aceptadas": 75,
+   "v": 0.5415798397382627,
+   "q25": 0.5234090916096312,
+   "q75": 0.5705412322360006,
+   "coh": 0.5706998880994373,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 36
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 111,
+   "aceptadas": 75,
+   "v": 0.5190896535682826,
+   "q25": 0.5069789789312862,
+   "q75": 0.5325476299497556,
+   "coh": 0.5683059837679023,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 36
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 111,
+   "aceptadas": 75,
+   "v": 0.5499956597061731,
+   "q25": 0.5222371366058892,
+   "q75": 0.5638310783216642,
+   "coh": 0.5227361508185676,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 36
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 111,
+   "aceptadas": 59,
+   "v": 0.08843865890893822,
+   "q25": 0.08606638706790887,
+   "q75": 0.09125990847040913,
+   "coh": 0.5421849793562241,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 16,
+    "lento_esperando+noche_no_valida": 12,
+    "noche_no_valida": 18,
+    "coherencia+noche_no_valida": 6
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 111,
+   "aceptadas": 35,
+   "v": 0.05007373406110051,
+   "q25": 0.04942072882587427,
+   "q75": 0.051127558201094096,
+   "coh": 0.5992533650476444,
+   "escalas": "l",
+   "motivos": {
+    "sin_textura": 40,
+    "sin_textura_esperando+noche_no_valida": 9,
+    "lento_esperando+noche_no_valida": 11,
+    "noche_no_valida": 16
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 111,
+   "aceptadas": 20,
+   "v": 0.06236481340446318,
+   "q25": 0.0619831298296014,
+   "q75": 0.0627365462635178,
+   "coh": 0.5227869068259159,
+   "escalas": "l",
+   "motivos": {
+    "sin_textura": 55,
+    "sin_textura_esperando+noche_no_valida": 13,
+    "lento_esperando+noche_no_valida": 8,
+    "noche_no_valida": 15
+   }
+  }
+ ],
+ "segundos_proceso": 3898
+}

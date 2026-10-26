@@ -1,0 +1,48 @@
+{
+  "fuente": "myoshoji",
+  "preset": {
+    "video": "..\\..\\casos\\09_directo_tokio\\raspberry\\prueba\\myoshoji_20s.mp4",
+    "cuadrilatero": [
+      [
+        360,
+        700
+      ],
+      [
+        360,
+        385
+      ],
+      [
+        697,
+        385
+      ],
+      [
+        1010,
+        700
+      ]
+    ],
+    "largo_m": 10.0,
+    "ancho_m": 8.8,
+    "n_estaciones": 9,
+    "margen_orilla": 0.06,
+    "largo_linea_m": 9.0,
+    "centro_linea": 0.5,
+    "ancho_banda_m": 0.6,
+    "lineas_banda": 7,
+    "v_esperada": 0.3
+  },
+  "escala_verificada": false,
+  "fps": 30.0,
+  "k_real": 2,
+  "dt_real": 0.06666666666666667,
+  "ventana_s": 10.0,
+  "paso_medida_s": 1.0,
+  "lado_bloque": 64,
+  "coh_min_bloque": 0.5,
+  "sigma_derivada": 1.5,
+  "actividad_min": 0.5,
+  "fraccion_activa": 0.5,
+  "coh_min_estacion": 0.6,
+  "n_bloques_min": 6,
+  "cobertura_min": 0.5,
+  "v_mediana_ms": 0.47169662920412847
+}

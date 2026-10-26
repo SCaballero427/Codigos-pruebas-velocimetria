@@ -1,0 +1,833 @@
+--- v7_arrow_siembra
++++ v8_canal_yaqui
+@@ -4,29 +4,6 @@
+ import benchmark  # modulo local (benchmark.py, en esta misma carpeta)
+ 
+-
+-def buscar_datasets():
+-    """Carpeta 'datasets vision velocimetria', donde este."""
+-    candidatos = [Path("../../datos/externos/datasets vision velocimetria")]
+-    if os.environ.get("DATASETS_VELOCIMETRIA"):
+-        candidatos.append(Path(os.environ["DATASETS_VELOCIMETRIA"]))
+-    candidatos.append(Path("../../../test_pyorc-20261009T172625Z-1-001/test_pyorc/"
+-                           "datasets vision velocimetria"))
+-    for c in candidatos:
+-        if c.is_dir():
+-            return c
+-    raise SystemExit("No se encuentran los datasets externos: ver datos/externos/LEEME.md")
+-
+-
+ # --- Entradas (nunca se modifican) ---
+-DIR_DATOS = buscar_datasets() / "data" / "RiverArrow"
+-DIR_STAB = DIR_DATOS / "Stabilised"
+-
+-VIDEOS = {
+-    "sin sembrar": DIR_STAB / "GoPro_Stable_trans_Unseeded" / "Video" / "Arrow_GoPro_Unseeded_Stabilised.avi",
+-    "sembrado": DIR_STAB / "GoPro_stable_trans_seeded" / "Video" / "Arrow_GoPro_Seeded_Stabilised.avi",
+-}
+-ARCHIVO_VIDEO = VIDEOS["sin sembrar"]
+-# De la hoja de validacion se leen en la Parte 2 SOLO las posiciones de las verticales.
+-ARCHIVO_VALIDACION = DIR_DATOS / "Reference" / "Validation_Data_Arrow_GoPro.xlsx"
++ARCHIVO_VIDEO = Path("../../datos/canal_riego/WhatsApp Video 2026-08-16 at 8.07.12 PM.mp4")
+ 
+ # --- Salidas ---
+@@ -43,8 +20,7 @@
+ benchmark.reiniciar()
+ 
+-print("Datos de entrada:", DIR_DATOS)
+ print("Salidas en:      ", DIR_SALIDA)
+ # Se comprueba de una vez que las entradas existen, antes de procesar nada.
+-for entrada in (*VIDEOS.values(), ARCHIVO_VALIDACION):
++for entrada in (ARCHIVO_VIDEO,):
+     print(f"  {'OK   ' if entrada.exists() else 'FALTA'} {entrada.name}")
+ 
+@@ -63,4 +39,5 @@
+ frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+ ALTO_PX, ANCHO_PX = frame.shape[:2]
++gris0 = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+ 
+ # Forma (filas, columnas, canales): las filas son la altura y las columnas el ancho.
+@@ -69,93 +46,123 @@
+ print(f"Fotogramas en el video: {N_TOTAL}")
+ 
+-
+-def cargar(ruta):
+-    """El video entero en gris (son ~100 fotogramas de 464x505: 23 MB)."""
+-    cap = cv2.VideoCapture(str(ruta))
+-    fs = []
+-    while True:
+-        ok, fr = cap.read()
+-        if not ok:
+-            break
+-        fs.append(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY).astype(np.float32))
+-    cap.release()
+-    return np.stack(fs)
+-
+-
+-pilas = {etq: cargar(ruta) for etq, ruta in VIDEOS.items()}
+-fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+-for j, etq in enumerate(VIDEOS):
+-    axes[0, j].imshow(pilas[etq][0], cmap="gray")
+-    axes[0, j].set_title(f"Primer fotograma - {etq} ({len(pilas[etq])} fotogramas)")
+-    im = axes[1, j].imshow(pilas[etq].std(axis=0), cmap="viridis", vmin=0, vmax=40)
+-    axes[1, j].set_title(f"Desviacion tipica temporal - {etq}")
+-    plt.colorbar(im, ax=axes[1, j], shrink=0.75)
+-plt.tight_layout()
++plt.figure(figsize=(10, 6))
++plt.imshow(frame)
++plt.title("Primer fotograma - canal piloto Yaqui (movil, WhatsApp)")
+ plt.savefig(DIR_SALIDA / "fig1_fotograma.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+-import pandas as pd
+-
+ # ---------------------------------------------------------------------------------------
+ #  >>> AJUSTABLE <<<  Geometria
+ # ---------------------------------------------------------------------------------------
+-# Escala de la imagen ortorrectificada, declarada por el Readme.txt.  (obtenido del dataset)
+-ESCALA = 0.0174               # m/px
+-# Margen al borde del fotograma: una muestra mas cerca toma valores de borde, no del agua.
+-MARGEN_BORDE = 5              # px
+-# ---------------------------------------------------------------------------------------
+-
+-
+-# velocidad, no se lee aqui).  (obtenido del dataset)
+-_val = pd.read_excel(ARCHIVO_VALIDACION, header=None)
+-_filas, _seccion = [], None
+-for _, r in _val.iloc[11:].iterrows():
+-    etiqueta = str(r[0])
+-    if etiqueta.startswith("XS"):
+-        _seccion = etiqueta
+-    elif _seccion is not None and etiqueta.replace(".", "").isdigit():
+-        _filas.append((_seccion, float(r[0]), float(r[1])))
+-verticales = pd.DataFrame(_filas, columns=["seccion", "x", "y"])
+-SECCIONES = list(dict.fromkeys(verticales.seccion))
+-N_ESTACIONES = len(verticales)
+-MAPA_RECT = None              # el video ya esta en el plano del agua
+-
+-
+-angulos = {}
+-for sec in SECCIONES:
+-    p = verticales[verticales.seccion == sec][["x", "y"]].to_numpy()
+-    d = p[-1] - p[0]
+-    angulos[sec] = float(np.degrees(np.arctan2(-d[0], d[1])))
+-verticales["angulo"] = verticales.seccion.map(angulos)
+-# Progresiva de cada vertical a lo largo de su propia seccion, desde el primer punto.
+-verticales["s_m"] = [np.hypot(r.x - verticales[verticales.seccion == r.seccion].x.iloc[0],
+-                              r.y - verticales[verticales.seccion == r.seccion].y.iloc[0]) * ESCALA
+-                     for r in verticales.itertuples()]
+-print(f"Escala declarada: {ESCALA * 1000:.1f} mm/px; {len(SECCIONES)} secciones, "
+-      f"{N_ESTACIONES} verticales")
+-for sec in SECCIONES:
+-    print(f"  {sec}: {int((verticales.seccion == sec).sum())} verticales, normal "
+-          f"{angulos[sec]:+.1f} grados")
++FOCAL = 780.0                 # px, supuesta (ver arriba): la mayor incertidumbre geometrica
++# Filas donde se buscan las orillas: por debajo de 560 empieza la pasarela; por encima de
++# 60 el canal ya no se distingue del fondo.
++FILA_BORDE_INI, FILA_BORDE_FIN, FILA_BORDE_PASO = 60, 560, 10
++# Tramo medido, en alturas de camara desde la camara: por debajo de 1.40 esta la sombra de
++# la pasarela; por encima de 3.20 el muestreo cae por debajo de ~0.2 px de imagen y la STI
++# se aliasea (medido en archivo/08_canal_piloto_yaqui/experimentos/alcance/).
++YMIN, YMAX = 1.40, 3.20
++# ---------------------------------------------------------------------------------------
++
++
++def recta_ransac(P, tol=6.0, iters=600):
++    """Recta x = a*y + b robusta a puntos sueltos."""
++    rng = np.random.default_rng(0)
++    mejor = (0, 0.0, 0.0)
++    for _ in range(iters):
++        (x1, y1), (x2, y2) = P[rng.choice(len(P), 2, replace=False)]
++        if abs(y1 - y2) < 20:
++            continue
++        a = (x1 - x2) / (y1 - y2)
++        n = (np.abs(P[:, 0] - (a * P[:, 1] + x1 - a * y1)) < tol).sum()
++        if n > mejor[0]:
++            mejor = (n, a, x1 - a * y1)
++    m = np.abs(P[:, 0] - (mejor[1] * P[:, 1] + mejor[2])) < tol
++    a, b = np.polyfit(P[m, 1], P[m, 0], 1)
++    return float(a), float(b), int(m.sum())
++
++
++
++izq, der = [], []
++for y in range(FILA_BORDE_INI, FILA_BORDE_FIN, FILA_BORDE_PASO):
++    fila = cv2.GaussianBlur(gris0[y:y + 1, :].astype(np.float32), (9, 1), 0).ravel()
++    d = np.abs(np.diff(fila))
++    izq.append((int(np.argmax(d[:ANCHO_PX // 2])), y))
++    der.append((int(ANCHO_PX // 2 + np.argmax(d[ANCHO_PX // 2:])), y))
++a_izq, b_izq, n_izq = recta_ransac(np.array(izq, float))
++a_der, b_der, n_der = recta_ransac(np.array(der, float))
++# El punto de fuga: donde se cortan las dos orillas.
++y_v = (b_der - b_izq) / (a_izq - a_der)
++V1 = np.array([a_izq * y_v + b_izq, y_v])
++print(f"Orillas: {n_izq} y {n_der} puntos de 50 en la recta; punto de fuga ({V1[0]:.1f}, {V1[1]:.1f})")
++
++
++def homografia(v1, focal, xmin, ymax, esc):
++    """Imagen -> plano rectificado (px), con la altura de la camara como unidad (de la v4)."""
++    cxi, cyi = ANCHO_PX / 2, ALTO_PX / 2
++    theta = np.arctan((cyi - v1[1]) / focal)                 # cabeceo, del horizonte
++    K = np.array([[focal, 0, cxi], [0, focal, cyi], [0, 0, 1.0]])
++    R = np.array([[1, 0, 0],
++                  [0, -np.sin(theta), -np.cos(theta)],
++                  [0, np.cos(theta), -np.sin(theta)]])
++    g2i = K @ np.column_stack([R[:, 0], R[:, 1], [0, np.cos(theta), np.sin(theta)]])
++    d = R.T @ np.linalg.inv(K) @ np.array([v1[0], v1[1], 1.0])
++    psi = np.arctan2(d[0], d[1])                             # guinada: canal vertical en la salida
++    rot = np.array([[np.cos(psi), np.sin(psi), 0],
++                    [-np.sin(psi), np.cos(psi), 0], [0, 0, 1.0]])
++    S = np.array([[esc, 0, -xmin * esc], [0, -esc, ymax * esc], [0, 0, 1.0]])
++    return S @ np.linalg.inv(g2i @ np.linalg.inv(rot)), np.degrees(theta), np.degrees(psi)
++
++
++
++# fija el ancho del canal, en alturas de camara, y el recorte transversal.
++H1, CABECEO, GUINADA = homografia(V1, FOCAL, 0.0, YMAX, 1.0)
++ys_b = np.linspace(FILA_BORDE_INI + 60, FILA_BORDE_FIN - 40, 9)
++def a_plano(P):
++    q = cv2.perspectiveTransform(np.float32(P).reshape(-1, 1, 2), H1).reshape(-1, 2)
++    return q[:, 0]                                           # X (con xmin = 0 y esc = 1)
++X_IZQ = float(np.mean(a_plano(np.column_stack([a_izq * ys_b + b_izq, ys_b]))))
++X_DER = float(np.mean(a_plano(np.column_stack([a_der * ys_b + b_der, ys_b]))))
++ANCHO_CANAL = X_DER - X_IZQ
++print(f"cabeceo {CABECEO:.2f} grados, guinada {GUINADA:.2f} grados; ancho del canal "
++      f"{ANCHO_CANAL:.4f} alturas de camara")
+ 
+ # ---------------------------------------------------------------------------------------
+ #  >>> AJUSTABLE <<<  Lineas de busqueda
+ # ---------------------------------------------------------------------------------------
+-# Orden de magnitud de la velocidad superficial: el centro del rango que da la correlacion de
+-# parches entre fotogramas consecutivos del video sembrado (4.0 a 6.4 px/fotograma). Para el
+-# video sin sembrar no se puede medir (no hay con que): se usa el mismo, como todo lo demas.
+-V_ESPERADA = 0.45             # m/s
+-
+-# Banda estrecha: las verticales de una seccion estan a ~25 px.
+-LARGO_LINEA = 48 * 5 * ESCALA    # m
+-ANCHO_BANDA, PASO_BANDA = 6, 3   # px
+-# ---------------------------------------------------------------------------------------
+-
+-centros = verticales[["x", "y"]].to_numpy()
++# Velocidad esperada en alturas de camara por segundo. Solo fija el paso de muestreo; sale de
++# una correlacion de conjunto previa (0.038), redondeada al alza tras ver las estelas.
++V_ESPERADA = 0.056
++# Estaciones y retranqueo desde cada orilla (la franja de la orilla derecha es hormigon).
++N_ESTACIONES = 15
++RETRANQUEO = 0.10
++# Direccion del flujo en el plano rectificado: hacia arriba (el agua se aleja de la camara).
++ANGULO_FLUJO = -90.0
++# Banda de 11 lineas paralelas de 0.10 alturas de camara: con 3 lineas la coherencia cae a
++# 0.48-0.75; con 21 no mejora.
++ANCHO_BANDA_ALT, N_LINEAS_BANDA = 0.10, 11
++# ---------------------------------------------------------------------------------------
++
++
++ESC = 1.0 / (V_ESPERADA * DT)                    # px por altura de camara
++ESCALA = 1.0 / ESC                               # alturas de camara por px
++XMIN, XMAX = X_IZQ - 0.2, X_DER + 0.2
++HOMOGRAFIA, _, _ = homografia(V1, FOCAL, XMIN, YMAX, ESC)
++TAM_RECT = (int((XMAX - XMIN) * ESC), int((YMAX - YMIN) * ESC))
++jj, ii = np.meshgrid(np.arange(TAM_RECT[0], dtype=np.float32), np.arange(TAM_RECT[1], dtype=np.float32))
++q = cv2.perspectiveTransform(np.stack([jj.ravel(), ii.ravel()], 1).reshape(-1, 1, 2),
++                             np.linalg.inv(HOMOGRAFIA)).reshape(TAM_RECT[1], TAM_RECT[0], 2)
++MAPA_RECT = (np.ascontiguousarray(q[..., 0]), np.ascontiguousarray(q[..., 1]))
++
++X_ESTACIONES = np.linspace(X_IZQ + RETRANQUEO, X_DER - RETRANQUEO, N_ESTACIONES)
++centros = np.column_stack([(X_ESTACIONES - XMIN) * ESC, np.full(N_ESTACIONES, TAM_RECT[1] / 2)])
+ D_ESPERADO = V_ESPERADA * DT / ESCALA        # px por fotograma
+ DS = int(round(D_ESPERADO))                  # paso de muestreo: estelas a ~45 grados
+ SIGMA_ANTIALIAS = 0.5 * DS                   # filtro paso bajo obligatorio antes de submuestrear
+-print(f"Desplazamiento esperado: {D_ESPERADO:.2f} px/fotograma -> DS = {DS} px, "
+-      f"sigma antialias = {SIGMA_ANTIALIAS:.1f} px, estelas a "
+-      f"{np.degrees(np.arctan(D_ESPERADO / DS)):.1f} grados")
++LARGO_LINEA = YMAX - YMIN                    # alturas de camara
++ANCHO_BANDA = ANCHO_BANDA_ALT * ESC          # px
++PASO_BANDA = ANCHO_BANDA / (N_LINEAS_BANDA - 1)
++print(f"Plano rectificado: {TAM_RECT[0]}x{TAM_RECT[1]} px a {ESC:.0f} px por altura de camara; "
++      f"DS = {DS} px")
+ 
+ 
+@@ -192,25 +199,31 @@
+ 
+ 
+-mapx, mapy, N_BANDA = mapa_banda(centros, verticales.angulo.to_numpy(), DS, LARGO_LINEA / ESCALA,
++mapx, mapy, N_BANDA = mapa_banda(centros, ANGULO_FLUJO, DS, LARGO_LINEA / ESCALA - 1,
+                                  ANCHO_BANDA, PASO_BANDA)
+-
+-dentro = ((mapx >= MARGEN_BORDE) & (mapx < ANCHO_PX - MARGEN_BORDE)
+-          & (mapy >= MARGEN_BORDE) & (mapy < ALTO_PX - MARGEN_BORDE))
++# Que muestras ven la imagen: las del plano rectificado cuyo origen cae dentro del fotograma.
++
++dentro_rect = ((MAPA_RECT[0] >= 0) & (MAPA_RECT[0] < ANCHO_PX - 1)
++               & (MAPA_RECT[1] >= 0) & (MAPA_RECT[1] < ALTO_PX - 1)).astype(np.float32)
++dentro = cv2.remap(dentro_rect, mapx, mapy, cv2.INTER_NEAREST) > 0.5
+ VALIDO = dentro.reshape(N_ESTACIONES, N_BANDA, -1).all(axis=1)
+-verticales["cobertura"] = VALIDO.mean(axis=1)
+-print(f"{N_ESTACIONES} estaciones x {N_BANDA} lineas de {mapx.shape[1]} muestras "
+-      f"({mapx.shape[1] * DS * ESCALA:.2f} m cada una)")
+-print("Cobertura por seccion:", verticales.groupby("seccion").cobertura.min().round(2).to_dict())
+-
+-plt.figure(figsize=(8, 8))
+-plt.imshow(pilas["sembrado"][0], cmap="gray")
+-for i in range(N_ESTACIONES):
+-    lin = slice(i * N_BANDA, (i + 1) * N_BANDA)
+-    plt.plot(mapx[lin][N_BANDA // 2], mapy[lin][N_BANDA // 2],
+-             "c-" if verticales.cobertura[i] >= 0.5 else "r-", lw=0.7)
+-plt.plot(verticales.x, verticales.y, "w.", ms=4)
+-plt.xlim(0, ANCHO_PX); plt.ylim(ALTO_PX, 0)
+-plt.title("Lineas de busqueda giradas a la normal de cada seccion (sobre el video sembrado)")
+-plt.savefig(DIR_SALIDA / "fig2_lineas_busqueda.png", dpi=110, bbox_inches="tight")
++COBERTURA = VALIDO.mean(axis=1)
++print(f"{N_ESTACIONES} estaciones x {N_BANDA} lineas de {mapx.shape[1]} muestras; "
++      f"cobertura minima {COBERTURA.min():.2f}")
++
++rect0 = cv2.remap(frame_bgr, MAPA_RECT[0], MAPA_RECT[1], cv2.INTER_LINEAR)
++fig, ax = plt.subplots(1, 2, figsize=(15, 5.2), gridspec_kw=dict(width_ratios=[1.6, 1]))
++ax[0].imshow(frame)
++yy = np.array([V1[1] + 5, ALTO_PX])
++ax[0].plot(a_izq * yy + b_izq, yy, "lime"); ax[0].plot(a_der * yy + b_der, yy, "lime")
++ax[0].plot(*V1, "r+", ms=14, mew=2)
++ax[0].set_ylim(ALTO_PX, min(V1[1], 0) - 10); ax[0].set_title("Orillas (RANSAC) y punto de fuga")
++ax[1].imshow(cv2.cvtColor(rect0, cv2.COLOR_BGR2RGB), extent=[XMIN, XMAX, YMIN, YMAX])
++for X in X_ESTACIONES:
++    ax[1].axvline(X, color="c", lw=0.8)
++ax[1].axvline(X_IZQ, color="lime"); ax[1].axvline(X_DER, color="lime")
++ax[1].set_xlabel("X (alturas de camara)"); ax[1].set_ylabel("Y (alturas de camara)")
++ax[1].set_title("Plano rectificado y las 15 estaciones")
++plt.tight_layout()
++plt.savefig(DIR_SALIDA / "fig2_geometria.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+@@ -218,20 +231,57 @@
+ #  >>> AJUSTABLE <<<  Cuanto video se procesa y parametros del estimador
+ # ---------------------------------------------------------------------------------------
+-# El video entero (los dos tienen menos de 600 fotogramas).
+-N_FRAMES = 600
+-
+-LADO_BLOQUE = 24
++
++N_FRAMES = N_TOTAL
++
++LADO_BLOQUE = 64
+ # Coherencia minima para que un bloque entre en la mediana ponderada.
+ COH_MIN_BLOQUE = 0.50
+ # Suavizado gaussiano previo a las derivadas, en pixeles de STI.
+ SIGMA_DERIVADA = 1.5
+-# ---------------------------------------------------------------------------------------
+-
+-
+-def construir_sti(archivo, mapx, mapy, n_frames, sigma, mapa_rect=None):
++
++CUANTIL_SENAL = 0.85
++
++# tras un desenfoque de 0.8 px contra el ruido de un pixel del codec.
++TOPHAT_K, SIGMA_PREVIO = 5, 0.8
++# ---------------------------------------------------------------------------------------
++
++NUCLEO_TOPHAT = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (TOPHAT_K, TOPHAT_K))
++
++
++def realzar(gris):
++    """Top-hat: solo lo mas brillante que su entorno y mas pequeno que el disco."""
++    return cv2.morphologyEx(cv2.GaussianBlur(gris, (0, 0), SIGMA_PREVIO), cv2.MORPH_TOPHAT,
++                            NUCLEO_TOPHAT)
++
++
++
++mascara = np.zeros(gris0.shape, np.uint8)
++mascara[0:FILA_BORDE_FIN - 40, :] = 255
++agua = np.array([[b_izq, 0], [b_der, 0], [a_der * ALTO_PX + b_der, ALTO_PX],
++                 [a_izq * ALTO_PX + b_izq, ALTO_PX]], np.int32)
++cv2.fillPoly(mascara, [agua], 0)
++P0 = cv2.goodFeaturesToTrack(gris0, 600, 0.01, 7, mask=mascara)
++derivas = []
++
++
++def estabilizar(gris):
++    """Afinidad fotograma 0 -> fotograma actual (Lucas-Kanade contra el fotograma 0)."""
++    p1, st, _ = cv2.calcOpticalFlowPyrLK(gris0, gris, P0, None, winSize=(21, 21), maxLevel=3,
++                                         criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
++    ok = st.ravel() == 1
++    A, _ = cv2.estimateAffinePartial2D(P0[ok], p1[ok], method=cv2.RANSAC, ransacReprojThreshold=2.0)
++    A = np.array([[1.0, 0, 0], [0, 1.0, 0]]) if A is None else A
++    derivas.append(float(np.median(np.linalg.norm((p1[ok] - P0[ok]).reshape(-1, 2), axis=1))))
++    return A
++
++
++def construir_sti(archivo, mapx, mapy, n_frames, sigma, mapa_rect=None, realce=None,
++                  estabilizacion=None):
+     """Apila n_frames filas muestreadas -> STI de forma (n_lineas, n_frames, n_muestras).
+ 
+     Si se da un mapa de rectificacion (mapx, mapy del plano a la imagen), cada fotograma se
+     rectifica con remap antes del antialias.
++    `realce` se aplica al fotograma en gris antes de rectificar; `estabilizacion`
++    devuelve la afinidad del fotograma, que se aplica al mapa de rectificacion.
+     """
+     cap = cv2.VideoCapture(str(archivo))
+@@ -242,7 +292,14 @@
+             sti = sti[:, :k, :]
+             break
+-        gris = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY).astype(np.float32)
++        gris = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)
++        mx, my = mapa_rect if mapa_rect is not None else (None, None)
++        if estabilizacion is not None:
++            A = estabilizacion(gris).astype(np.float32)
++            mx, my = (A[0, 0] * mx + A[0, 1] * my + A[0, 2], A[1, 0] * mx + A[1, 1] * my + A[1, 2])
++        if realce is not None:
++            gris = realce(gris)
++        gris = gris.astype(np.float32)
+         if mapa_rect is not None:
+-            gris = cv2.remap(gris, mapa_rect[0], mapa_rect[1], cv2.INTER_LINEAR)
++            gris = cv2.remap(gris, mx, my, cv2.INTER_LINEAR)
+         # Antialias ANTES de muestrear: sin esto el submuestreo inventa orientaciones.
+         gris = cv2.GaussianBlur(gris, (0, 0), sigma)
+@@ -281,13 +338,16 @@
+ 
+ 
+-def medir_sti(sti_p, lado=LADO_BLOQUE, coh_min=COH_MIN_BLOQUE, sigma=SIGMA_DERIVADA, valido=None):
++def medir_sti(sti_p, lado=LADO_BLOQUE, coh_min=COH_MIN_BLOQUE, sigma=SIGMA_DERIVADA, valido=None,
++              energia=None, cuantil=None):
+     """Pendiente robusta de una STI, por bloques con solape: (m, coherencia mediana).
+ 
+-    `valido` (una por muestra) marca las muestras dentro del fotograma; los bloques que
+-    tocan alguna de fuera no cuentan.
++    `valido` (una por muestra) marca las muestras dentro del fotograma; los bloques que tocan
++    alguna de fuera no cuentan.
++    Con `energia` (una STI del mismo tamano) y `cuantil`, solo cuentan los bloques cuyo
++    maximo de energia esta por encima de ese cuantil: los que contienen particula.
+     """
+     nt, nx = sti_p.shape
+     paso = lado // 2
+-    ms, cs = [], []
++    ms, cs, es = [], [], []
+     for t0 in range(0, nt - lado + 1, paso):
+         for x0 in range(0, nx - lado + 1, paso):
+@@ -297,7 +357,11 @@
+             if np.isfinite(m):
+                 ms.append(m); cs.append(c)
++                es.append(energia[t0:t0 + lado, x0:x0 + lado].max() if energia is not None else 0.0)
+     if not ms:
+         return np.nan, 0.0
+-    ms, cs = np.array(ms), np.array(cs)
++    ms, cs, es = np.array(ms), np.array(cs), np.array(es)
++    if cuantil is not None:
++        senal = es >= np.quantile(es, cuantil)
++        ms, cs = ms[senal], cs[senal]
+     coh_mediana = float(np.median(cs))
+     usables = cs >= coh_min
+@@ -314,5 +378,6 @@
+ def medir_video(archivo):
+     """Lo que en la v6 era el cuerpo de esta celda, para un video cualquiera."""
+-    sti_crudo = construir_sti(archivo, mapx, mapy, N_FRAMES, SIGMA_ANTIALIAS, MAPA_RECT)
++    sti_crudo = construir_sti(archivo, mapx, mapy, N_FRAMES, SIGMA_ANTIALIAS, MAPA_RECT,
++                              realzar, estabilizar)
+     # (estacion, linea de la banda, tiempo, muestra)
+     sti_crudo = sti_crudo.reshape(N_ESTACIONES, N_BANDA, *sti_crudo.shape[1:])
+@@ -320,36 +385,61 @@
+     contraste = np.median(sti_crudo.std(axis=2), axis=2).mean(axis=1)
+     brillo = sti_crudo.mean(axis=(1, 2, 3))
+-    # Cada linea de la banda se normaliza por separado y luego se promedian.
+-    sti_prep = np.stack([np.mean([preparar_sti(l) for l in banda], axis=0) for banda in sti_crudo])
++
++    # alguna linea de la banda (top-hat por encima de UMBRAL_PARTICULA).
++    densidad = (sti_crudo.max(axis=1) > UMBRAL_PARTICULA).mean(axis=(1, 2))
+     v_stiv = np.full(N_ESTACIONES, np.nan)
+     coherencia = np.full(N_ESTACIONES, np.nan)
++    sti_prep = []
+     for i in range(N_ESTACIONES):
+-        m, coherencia[i] = medir_sti(sti_prep[i], valido=VALIDO[i])
+-
+-        v_stiv[i] = abs(m) * DS * ESCALA / DT if np.isfinite(m) else np.nan
+-    return dict(sti_prep=sti_prep, contraste=contraste, brillo=brillo, v_stiv=v_stiv,
+-                coherencia=coherencia, n_frames=sti_crudo.shape[2])
+-
+-
+-resultados = {}
+-for etq, ruta in VIDEOS.items():
+-    with benchmark.medir(f"Parte 4: STI y tensor [{etq}]", n_frames=len(pilas[etq])):
+-        resultados[etq] = medir_video(ruta)
+-    r = resultados[etq]
+-    print(f"[{etq:11s}] {r['n_frames']} fotogramas: coherencia mediana "
+-          f"{np.median(r['coherencia']):.3f}, maxima {r['coherencia'].max():.3f}; contraste "
+-          f"temporal mediano {np.median(r['contraste']):.2f}")
+-
+-
+-DEMO = [12, 20, 30, 40]
+-fig, axes = plt.subplots(2, len(DEMO), figsize=(15, 8))
+-for fila, etq in enumerate(VIDEOS):
+-    for col, i in enumerate(DEMO):
+-        axes[fila, col].imshow(resultados[etq]["sti_prep"][i], cmap="gray", aspect="auto")
+-        axes[fila, col].set_title(f"{verticales.seccion[i]} v{i} - {etq}", fontsize=9)
+-        axes[fila, col].set_xticks([]); axes[fila, col].set_yticks([])
+-fig.suptitle("Arriba sin sembrar: ruido. Abajo sembrado: estelas rectas. Mismo proceso.")
++        # Cada linea de la banda se normaliza por separado y luego se promedian.
++        prep = np.mean([preparar_sti(l) for l in sti_crudo[i]], axis=0)
++        sti_prep.append(prep[:900])
++        m, coherencia[i] = medir_sti(prep, valido=VALIDO[i], energia=sti_crudo[i].mean(axis=0),
++                                     cuantil=CUANTIL_SENAL)
++        v_stiv[i] = m * DS * ESCALA / DT if np.isfinite(m) else np.nan
++    return dict(sti_crudo=sti_crudo, sti_prep=np.stack(sti_prep), contraste=contraste,
++                brillo=brillo, densidad=densidad, v_stiv=v_stiv, coherencia=coherencia,
++                n_frames=sti_crudo.shape[2])
++
++
++UMBRAL_PARTICULA = 4.0
++with benchmark.medir("Parte 4: STI (top-hat, estabilizacion, rectificacion) y tensor",
++                     n_frames=N_FRAMES):
++    r = medir_video(ARCHIVO_VIDEO)
++v_stiv, coherencia, DENSIDAD = r["v_stiv"], r["coherencia"], r["densidad"]
++print(f"STI: {N_ESTACIONES} estaciones x {N_BANDA} lineas x {r['n_frames']} fotogramas x "
++      f"{mapx.shape[1]} muestras")
++print(f"Deriva del movil: mediana {np.median(derivas):.2f} px, maxima {np.max(derivas):.2f} px")
++import pandas as pd
++print(pd.DataFrame({"estacion": np.arange(N_ESTACIONES), "X": X_ESTACIONES, "densidad": DENSIDAD,
++                    "coherencia": coherencia, "v_alt_cam_s": v_stiv})
++      .to_string(index=False, float_format=lambda x: f"{x:8.4f}"))
++
++
++# los bloques (como hasta la v7).
++sin_seleccion = []
++for i in range(N_ESTACIONES):
++    prep = np.mean([preparar_sti(l) for l in r["sti_crudo"][i]], axis=0)
++    m, c = medir_sti(prep, valido=VALIDO[i])
++    sin_seleccion.append(m * DS * ESCALA / DT if np.isfinite(m) else np.nan)
++print(pd.DataFrame({"estacion": np.arange(N_ESTACIONES), "densidad": DENSIDAD,
++                    "votan todos (v7)": sin_seleccion, "solo con particula (v8)": v_stiv})
++      .to_string(index=False, float_format=lambda x: f"{x:8.4f}"))
++con_trazador = (DENSIDAD >= 0.004) & (DENSIDAD <= 0.05) & (coherencia >= 0.60)
++cociente = np.array(sin_seleccion)[con_trazador] / v_stiv[con_trazador]
++print(f"\nEn las {int(con_trazador.sum())} estaciones con trazador, votando todos los bloques la "
++      f"velocidad cambia entre {100 * (cociente.min() - 1):+.0f} % y {100 * (cociente.max() - 1):+.0f} % "
++      f"({int((cociente < 0.95).sum())} de ellas, mas de un 5 % por debajo): el residuo estatico "
++      "(estelas verticales, v = 0) tira de la mediana hacia cero.")
++
++fig, ax = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
++for k, i in enumerate((int(np.nanargmax(DENSIDAD[:-1])), 4)):
++    ax[k].imshow(r["sti_prep"][i], cmap="gray", aspect="auto",
++                 extent=(YMIN, YMAX, r["sti_prep"].shape[1] * DT, 0))
++    ax[k].set_title(f"Estacion {i} (densidad {DENSIDAD[i]:.4f}): v = {v_stiv[i]:.4f} alt. cam/s")
++    ax[k].set_xlabel("Y a lo largo del canal (alturas de camara)")
++ax[0].set_ylabel("tiempo (s)")
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig3_sti_comparadas.png", dpi=110, bbox_inches="tight")
++plt.savefig(DIR_SALIDA / "fig3_sti.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+@@ -357,122 +447,83 @@
+ #  >>> AJUSTABLE <<<  Criterios de aceptacion
+ # ---------------------------------------------------------------------------------------
+-# Coherencia mediana minima para dar por buena una estacion. La misma de la v3 a la v6.
+-COH_MIN_ESTACION = 0.70
++
++COH_MIN_ESTACION = 0.60
+ # Desactivado desde la v6.
+ CONTRASTE_MIN = 0.0
+-
++# Desactivado desde la v7.
+ BRILLO_MAX_AGUA = 255.0
+-
++# Fraccion minima de la linea dentro del fotograma.
+ COBERTURA_MIN = 0.50
+-# ---------------------------------------------------------------------------------------
+-
+-medida, v_eff = {}, {}
++
++DENSIDAD_MIN, DENSIDAD_MAX = 0.004, 0.05
++# ---------------------------------------------------------------------------------------
++
+ with benchmark.medir("Parte 4b: control de calidad"):
+-    for etq, r in resultados.items():
+-        es_estatica = r["contraste"] < CONTRASTE_MIN
+-        es_orilla = r["brillo"] > BRILLO_MAX_AGUA
+-        fuera = verticales.cobertura.to_numpy() < COBERTURA_MIN
+-        medida[etq] = ((~es_estatica) & (~es_orilla) & (~fuera)
+-                       & (r["coherencia"] >= COH_MIN_ESTACION) & np.isfinite(r["v_stiv"]))
+-        v_eff[etq] = np.where(medida[etq], r["v_stiv"], np.nan)
+-
+-print("=" * 74)
+-print(f"{'video':<14}{'aceptadas':>12}{'coh mediana':>14}{'coh maxima':>13}{'contraste mediano':>20}")
+-for etq, r in resultados.items():
+-    print(f"{etq:<14}{medida[etq].sum():>6}/{N_ESTACIONES:<5}{np.median(r['coherencia']):>14.3f}"
+-          f"{r['coherencia'].max():>13.3f}{np.median(r['contraste']):>20.2f}")
+-print("=" * 74)
+-print(f"La coherencia MAXIMA del video sin sembrar ({resultados['sin sembrar']['coherencia'].max():.3f})"
+-      f" no llega al umbral de {COH_MIN_ESTACION}.")
+-print("El contraste temporal, aunque desactivado, separa tambien los dos videos sin solape: "
+-      f"{resultados['sin sembrar']['contraste'].max():.2f} como maximo sin sembrar, "
+-      f"{resultados['sembrado']['contraste'].min():.2f} como minimo sembrado.")
+-
+-fig, ax = plt.subplots(1, 2, figsize=(13, 4.5))
+-for etq, color in zip(VIDEOS, ["tab:red", "tab:blue"]):
+-    ax[0].hist(resultados[etq]["coherencia"], bins=np.linspace(0, 1, 26), alpha=0.65, color=color, label=etq)
+-    ax[1].plot(resultados[etq]["contraste"], resultados[etq]["coherencia"], "o", color=color, label=etq)
+-ax[0].axvline(COH_MIN_ESTACION, color="k", ls="--"); ax[0].set_xlabel("coherencia"); ax[0].legend()
+-ax[1].axhline(COH_MIN_ESTACION, color="k", ls="--"); ax[1].set_xlabel("contraste temporal")
+-ax[1].set_ylabel("coherencia"); ax[1].legend()
++    es_estatica = r["contraste"] < CONTRASTE_MIN
++    es_orilla = r["brillo"] > BRILLO_MAX_AGUA
++    fuera = COBERTURA < COBERTURA_MIN
++    sin_trazador = DENSIDAD < DENSIDAD_MIN
++    es_hormigon = DENSIDAD > DENSIDAD_MAX
++    medida = ((~es_estatica) & (~es_orilla) & (~fuera) & (~sin_trazador) & (~es_hormigon)
++              & (coherencia >= COH_MIN_ESTACION) & np.isfinite(v_stiv))
++    v_eff = np.where(medida, v_stiv, np.nan)
++
++estado = np.where(medida, "medida", np.where(sin_trazador, "sin trazador",
++                  np.where(es_hormigon, "orilla (densidad)", "coherencia baja")))
++print(f"Estaciones medidas: {int(medida.sum())} de {N_ESTACIONES}: {np.where(medida)[0].tolist()}")
++for i in np.where(~medida)[0]:
++    print(f"  estacion {i:2d}: {estado[i]} (densidad {DENSIDAD[i]:.5f}, coherencia {coherencia[i]:.3f})")
++
++# ---------------------------------------------------------------------------------------
++#  >>> AJUSTABLE <<<  Escala metrica SUPUESTA
++# ---------------------------------------------------------------------------------------
++# Ancho de la lamina de agua entre orillas, en metros. NO esta medido.
++ANCHO_LAMINA_M = 5.0
++# ---------------------------------------------------------------------------------------
++
++with benchmark.medir("Parte 5: perfil transversal"):
++    v_mediana = float(np.nanmedian(v_eff))
++    M_POR_ALTURA = ANCHO_LAMINA_M / ANCHO_CANAL
++
++print("=" * 60)
++print(f"Velocidad superficial mediana: {v_mediana:.4f} alturas de camara/s "
++      f"({int(medida.sum())} de {N_ESTACIONES} estaciones)")
++print(f"Con la escala supuesta ({M_POR_ALTURA:.3f} m por altura de camara): "
++      f"{v_mediana * M_POR_ALTURA:.3f} m/s")
++print("=" * 60)
++
++perfil = pd.DataFrame({"estacion": np.arange(N_ESTACIONES), "X_alt_cam": X_ESTACIONES,
++                       "densidad": DENSIDAD, "coherencia": coherencia,
++                       "v_alt_cam_s": v_eff, "v_ms_supuesta": v_eff * M_POR_ALTURA,
++                       "estado": estado})
++perfil.to_csv(SALIDA_PERFIL, index=False)
++
++import json
++config = dict(video=ARCHIVO_VIDEO.name, n_frames=int(r["n_frames"]), fps=FPS, focal=FOCAL,
++              punto_fuga=V1.tolist(), cabeceo=CABECEO, guinada=GUINADA,
++              ancho_canal_alturas=ANCHO_CANAL, y_min=YMIN, y_max=YMAX,
++              n_estaciones=N_ESTACIONES, retranqueo=RETRANQUEO, v_esperada=V_ESPERADA,
++              esc_px_por_altura=ESC, ds_px=DS, banda_alturas=ANCHO_BANDA_ALT,
++              n_lineas_banda=N_LINEAS_BANDA, lado_bloque=LADO_BLOQUE,
++              coh_min_bloque=COH_MIN_BLOQUE, sigma_derivada=SIGMA_DERIVADA,
++              cuantil_senal=CUANTIL_SENAL, tophat_k=TOPHAT_K, sigma_previo=SIGMA_PREVIO,
++              umbral_particula=UMBRAL_PARTICULA, coh_min_estacion=COH_MIN_ESTACION,
++              densidad_min=DENSIDAD_MIN, densidad_max=DENSIDAD_MAX,
++              ancho_lamina_m_supuesto=ANCHO_LAMINA_M, v_mediana_alt_cam_s=v_mediana)
++SALIDA_CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
++
++fig, ax = plt.subplots(figsize=(10, 4.2))
++ax.plot(X_ESTACIONES[medida], v_eff[medida], "o-", color="C0", ms=8, label="medida")
++ax.plot(X_ESTACIONES[~medida], np.zeros((~medida).sum()), "x", color="C3", ms=9, mew=2,
++        label="no medida (sin trazador, orilla o coherencia)")
++ax.axvline(X_IZQ, color="g", lw=0.8); ax.axvline(X_DER, color="g", lw=0.8)
++ax.set_xlabel("X (alturas de camara)"); ax.set_ylabel("v (alturas de camara/s)")
++sec = ax.secondary_yaxis("right", functions=(lambda v: v * M_POR_ALTURA, lambda v: v / M_POR_ALTURA))
++sec.set_ylabel("v (m/s, ancho SUPUESTO de 5 m)")
++ax.set_title("Perfil transversal: solo se mide donde hay detritos"); ax.legend(fontsize=8)
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig4_control_calidad.png", dpi=110, bbox_inches="tight")
++plt.savefig(DIR_SALIDA / "fig4_perfil.png", dpi=110, bbox_inches="tight")
+ plt.show()
+-
+-
+-def curva_decorrelacion(pila, saltos, parches, radio=28):
+-    """Pico de correlacion ensemble frente al salto temporal."""
+-    nrm = (pila - pila.mean(axis=0)) / (pila.std(axis=0) + 1e-6)
+-    curva = []
+-    for dt in saltos:
+-        busq = min(10 + 7 * dt, 60)
+-        picos = []
+-        for (x0, y0) in parches:
+-            acc = None
+-            for k in range(len(nrm) - dt):
+-                A = nrm[k, y0:y0 + 2 * radio, x0:x0 + 2 * radio]
+-                B = nrm[k + dt, max(y0 - busq, 0):y0 + 2 * radio + busq,
+-                        max(x0 - busq, 0):x0 + 2 * radio + busq]
+-                r = cv2.matchTemplate(B, A, cv2.TM_CCOEFF_NORMED)
+-                acc = r if acc is None else acc + r
+-            picos.append(float((acc / (len(nrm) - dt)).max()))
+-        curva.append(float(np.mean(picos)))
+-    return np.array(curva)
+-
+-
+-SALTOS = [1, 2, 3, 4, 6, 8]
+-PARCHES = [(150, 150), (250, 200), (200, 250)]     # parches de agua, lejos de las orillas
+-with benchmark.medir("Parte 4c: curvas de decorrelacion"):
+-    decorr = {etq: curva_decorrelacion(pilas[etq], SALTOS, PARCHES) for etq in VIDEOS}
+-tabla_decorr = pd.DataFrame({"salto_s": np.array(SALTOS) * DT,
+-                             **{etq: np.round(decorr[etq], 3) for etq in VIDEOS}})
+-tabla_decorr.to_csv(DIR_SALIDA / "decorrelacion.csv", index=False)
+-print(tabla_decorr.to_string(index=False))
+-
+-plt.figure(figsize=(8, 4.5))
+-for etq, color in zip(VIDEOS, ["tab:red", "tab:blue"]):
+-    plt.plot(np.array(SALTOS) * DT, decorr[etq], "o-", color=color, label=etq)
+-plt.axhline(0.1, color="gray", ls=":")
+-plt.xlabel("salto temporal (s)"); plt.ylabel("pico de correlacion ensemble")
+-plt.title("Cuanto dura el dibujo de la superficie"); plt.ylim(0, 0.8); plt.legend(); plt.grid(alpha=0.3)
+-plt.savefig(DIR_SALIDA / "fig5_decorrelacion.png", dpi=110, bbox_inches="tight")
+-plt.show()
+-
+-with benchmark.medir("Parte 5: perfiles transversales"):
+-    v_mediana = {etq: float(np.nanmedian(v)) if np.isfinite(v).any() else np.nan
+-                 for etq, v in v_eff.items()}
+-for etq in VIDEOS:
+-    print(f"[{etq:11s}] {int(medida[etq].sum()):2d} estaciones, mediana {v_mediana[etq]:.4f} m/s")
+-
+-perfil = verticales.copy()
+-for etq in VIDEOS:
+-    suf = etq.replace(" ", "_")
+-    perfil[f"coherencia_{suf}"] = resultados[etq]["coherencia"]
+-    perfil[f"contraste_{suf}"] = resultados[etq]["contraste"]
+-    perfil[f"v_{suf}"] = v_eff[etq]
+-perfil.to_csv(SALIDA_PERFIL, index=False)
+-
+-import json
+-config = dict(videos={k: v.name for k, v in VIDEOS.items()}, fps=FPS, escala_m_px=ESCALA,
+-              angulos_seccion=angulos, v_esperada=V_ESPERADA, ds_px=DS,
+-              sigma_antialias=SIGMA_ANTIALIAS, largo_linea_m=LARGO_LINEA,
+-              ancho_banda_px=ANCHO_BANDA, paso_banda_px=PASO_BANDA, lado_bloque=LADO_BLOQUE,
+-              coh_min_bloque=COH_MIN_BLOQUE, sigma_derivada=SIGMA_DERIVADA,
+-              coh_min_estacion=COH_MIN_ESTACION, contraste_min=CONTRASTE_MIN,
+-              brillo_max_agua=BRILLO_MAX_AGUA, cobertura_min=COBERTURA_MIN,
+-              aceptadas={k: int(v.sum()) for k, v in medida.items()})
+-SALIDA_CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
+-
+-fig, axes = plt.subplots(1, len(SECCIONES), figsize=(17, 4), sharey=True)
+-for ax, sec in zip(axes, SECCIONES):
+-    sel = (verticales.seccion == sec).to_numpy()
+-    for etq, color, marca in zip(VIDEOS, ["tab:red", "tab:blue"], ["x", "o"]):
+-        ax.plot(verticales.s_m[sel], v_eff[etq][sel], marca + "-", color=color,
+-                label=f"{etq} ({int(medida[etq][sel].sum())} validas)")
+-    ax.set_title(sec); ax.set_xlabel("progresiva (m)"); ax.grid(alpha=0.3); ax.legend(fontsize=7)
+-axes[0].set_ylabel("velocidad superficial (m/s)")
+-plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig6_perfiles.png", dpi=110, bbox_inches="tight")
+-plt.show()
++perfil
+ 
+ print("Maquina donde se han medido los tiempos:")
+@@ -494,110 +545,21 @@
+     ax.text(seg, y, f"  {seg:.1f} s ({pct:.0f} %)", va="center", fontsize=8)
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig7_recursos.png", dpi=110, bbox_inches="tight")
++plt.savefig(DIR_SALIDA / "fig5_recursos.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ tabla_recursos
+ 
+ 
+-# ---------------------------------------------------------------------------------------
+-#  Datos de validacion. Primera y unica vez que aparecen. (obtenido del dataset)
+-# ---------------------------------------------------------------------------------------
+-_vel, _sec = [], None
+-for _, r in _val.iloc[11:].iterrows():
+-    etiqueta = str(r[0])
+-    if etiqueta.startswith("XS"):
+-        _sec = etiqueta
+-    elif _sec is not None and etiqueta.replace(".", "").isdigit():
+-        _vel.append(float(r[2]))
+-V_REFERENCIA = np.array(_vel)
+-# ---------------------------------------------------------------------------------------
+-
+-for etq in VIDEOS:
+-    ok = np.isfinite(v_eff[etq])
+-    if not ok.any():
+-        print(f"[{etq}] 0 estaciones de {N_ESTACIONES}: la referencia existe (media "
+-              f"{V_REFERENCIA.mean():.3f} m/s), habia agua corriendo; falta textura en la imagen.")
+-        continue
+-    d = v_eff[etq][ok] - V_REFERENCIA[ok]
+-    print(f"[{etq}] {ok.sum()} estaciones: media STIV {v_eff[etq][ok].mean():.4f} m/s, referencia "
+-          f"{V_REFERENCIA[ok].mean():.4f} m/s; sesgo {100 * d.mean() / V_REFERENCIA[ok].mean():+.1f} %, "
+-          f"RMSE {np.sqrt((d ** 2).mean()):.4f} m/s, r = {np.corrcoef(v_eff[etq][ok], V_REFERENCIA[ok])[0, 1]:+.3f}")
+-
+-
+-# pares de fotogramas consecutivos antes de buscar el pico. Arbitro independiente de STIV.
+-RADIO_PARCHE, RADIO_BUSQUEDA, PASO_REJILLA = 20, 14, 20     # px
+-
+-
+-def piv_ensemble(pila, radio, busqueda, paso):
+-    """Campo de desplazamiento por correlacion ensemble. Devuelve X, Y, U, V, C."""
+-    nrm = (pila - pila.mean(axis=0)) / (pila.std(axis=0) + 1e-6)
+-    xs = np.arange(radio + busqueda, pila.shape[2] - radio - busqueda, paso)
+-    ys = np.arange(radio + busqueda, pila.shape[1] - radio - busqueda, paso)
+-    U = np.full((len(ys), len(xs)), np.nan)
+-    V, Cc = U.copy(), U.copy()
+-    for jj, y0 in enumerate(ys):
+-        for ii, x0 in enumerate(xs):
+-            acc = None
+-            for k in range(len(nrm) - 1):
+-                A = nrm[k, y0 - radio:y0 + radio, x0 - radio:x0 + radio]
+-                B = nrm[k + 1, y0 - radio - busqueda:y0 + radio + busqueda,
+-                        x0 - radio - busqueda:x0 + radio + busqueda]
+-                r = cv2.matchTemplate(B, A, cv2.TM_CCOEFF_NORMED)
+-                acc = r if acc is None else acc + r
+-            acc /= (len(nrm) - 1)
+-            j, i = np.unravel_index(acc.argmax(), acc.shape)
+-            U[jj, ii], V[jj, ii], Cc[jj, ii] = i - busqueda, j - busqueda, acc.max()
+-    X, Y = np.meshgrid(xs, ys)
+-    return X, Y, U, V, Cc
+-
+-
+-from scipy.interpolate import griddata
+-
+-with benchmark.medir("Parte 7: PIV ensemble (arbitro)", n_frames=len(pilas["sembrado"])):
+-    Xg, Yg, Ug, Vg, Cg = piv_ensemble(pilas["sembrado"], RADIO_PARCHE, RADIO_BUSQUEDA, PASO_REJILLA)
+-vel_piv = np.where(Cg > 0.25, np.hypot(Ug, Vg) * ESCALA / DT, np.nan)
+-fin = np.isfinite(vel_piv.ravel())
+-v_piv = griddata(np.column_stack([Xg.ravel(), Yg.ravel()])[fin], vel_piv.ravel()[fin],
+-                 verticales[["x", "y"]].to_numpy(), method="linear")
+-
+-v_sem = v_eff["sembrado"]
+-def estad(a, b):
+-    ok = np.isfinite(a) & np.isfinite(b)
+-    return ok.sum(), np.corrcoef(a[ok], b[ok])[0, 1], np.sqrt(((a[ok] - b[ok]) ** 2).mean())
+-print("=" * 70)
+-for nombre, a, b in [("STIV frente a la referencia", v_sem, V_REFERENCIA),
+-                     ("PIV  frente a la referencia", v_piv, V_REFERENCIA),
+-                     ("STIV frente al PIV", v_sem, v_piv)]:
+-    n_, r_, e_ = estad(a, b)
+-    print(f"  {nombre:28s} ({n_:2d} puntos): r = {r_:+.3f}, RMSE = {e_:.4f} m/s")
+-print("=" * 70)
+-
+-comparacion = verticales[["seccion", "x", "y", "s_m"]].copy()
+-comparacion["v_ref"] = V_REFERENCIA
+-comparacion["v_stiv_sembrado"] = v_sem
+-comparacion["v_piv_sembrado"] = v_piv
+-comparacion.to_csv(DIR_SALIDA / "comparacion_referencia.csv", index=False)
+-
+-fig, ax = plt.subplots(1, 2, figsize=(14, 5.5))
+-lim = [0.0, 0.8]
+-ax[0].plot(V_REFERENCIA, v_sem, "o", label="STIV"); ax[0].plot(V_REFERENCIA, v_piv, "^", label="PIV ensemble")
+-ax[0].plot(lim, lim, "k--", lw=1); ax[0].set_xlim(lim); ax[0].set_ylim(lim)
+-ax[0].set_xlabel("referencia (m/s)"); ax[0].set_ylabel("tecnica de imagen (m/s)"); ax[0].legend()
+-ax[0].set_title("Las dos tecnicas contra la referencia")
+-ax[1].plot(v_piv, v_sem, "o", color="tab:purple"); ax[1].plot(lim, lim, "k--", lw=1)
+-ax[1].set_xlim(lim); ax[1].set_ylim(lim); ax[1].set_xlabel("PIV ensemble (m/s)"); ax[1].set_ylabel("STIV (m/s)")
+-ax[1].set_title("STIV contra PIV")
+-plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig8_arbitro_independiente.png", dpi=110, bbox_inches="tight")
+-plt.show()
+-
+-n_s, r_s, e_s = estad(v_sem, V_REFERENCIA)
++V_CASO_ORIGINAL = 0.0590      # alturas de camara/s, casos/08_canal_piloto_yaqui (6 de 15 estaciones)
++print(f"Esta version:      {v_mediana:.4f} alturas de camara/s ({int(medida.sum())} estaciones)")
++print(f"Caso original:     {V_CASO_ORIGINAL:.4f} alturas de camara/s (6 estaciones), "
++      f"{100 * (v_mediana / V_CASO_ORIGINAL - 1):+.1f} %, no es una referencia")
+ resumen = pd.DataFrame([
+-    dict(concepto="Estaciones aceptadas, SIN SEMBRAR", valor=int(medida["sin sembrar"].sum()), unidad=f"de {N_ESTACIONES}"),
+-    dict(concepto="Estaciones aceptadas, SEMBRADO", valor=int(medida["sembrado"].sum()), unidad=f"de {N_ESTACIONES}"),
+-    dict(concepto="Coherencia maxima, sin sembrar", valor=float(resultados["sin sembrar"]["coherencia"].max()), unidad=f"umbral {COH_MIN_ESTACION}"),
+-    dict(concepto="Velocidad mediana STIV, sembrado", valor=v_mediana["sembrado"], unidad="m/s"),
+-    dict(concepto="Correlacion STIV vs referencia", valor=r_s, unidad="-"),
+-    dict(concepto="Correlacion STIV vs PIV", valor=estad(v_sem, v_piv)[1], unidad="-"),
+-    dict(concepto="Caudal", valor=np.nan, unidad="no calculable: el dataset no da batimetria"),
++    dict(concepto="Velocidad superficial mediana", valor=v_mediana, unidad="alturas de camara/s"),
++    dict(concepto="Velocidad superficial mediana (escala supuesta)", valor=v_mediana * M_POR_ALTURA,
++         unidad="m/s con ancho supuesto de 5 m"),
++    dict(concepto="Estaciones medidas", valor=int(medida.sum()), unidad=f"de {N_ESTACIONES}"),
++    dict(concepto="Caso original (contexto, no referencia)", valor=V_CASO_ORIGINAL,
++         unidad="alturas de camara/s"),
++    dict(concepto="Caudal", valor=np.nan, unidad="no calculable: no hay batimetria"),
+ ])
+ resumen.to_csv(SALIDA_RESUMEN, index=False)

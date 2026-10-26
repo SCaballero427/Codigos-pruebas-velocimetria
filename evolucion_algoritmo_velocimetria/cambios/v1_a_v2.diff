@@ -1,0 +1,642 @@
+--- v1_ngwerere_lspiv
++++ v2_smc_lspiv
+@@ -1,8 +1,12 @@
+ from pathlib import Path
+ 
++import benchmark
++
+ # --- Entradas (nunca se modifican) ---
+-DIR_DATOS = Path("../../datos/ngwerere")
+-ARCHIVO_VIDEO = DIR_DATOS / "ngwerere_20191103.mp4"             # video de 30 fps, 1920x1080
+-ARCHIVO_BATIMETRIA = DIR_DATOS / "ngwerere_cross_section.csv"   # transecto x, y, z en UTM 35S
++DIR_DATOS = Path("../../datos/USGS")
++ARCHIVO_SECCION = DIR_DATOS / "Station_Stage_SileCanal.csv"
++ARCHIVO_PIV_USGS = DIR_DATOS / "SMC_PIV_results.mat"
++
++ARCHIVO_VIDEO = Path("../../casos/02_smc_pyorc/entradas/SMC_estabilizado.mkv")
+ 
+ # --- Salidas ---
+@@ -16,4 +20,8 @@
+ SALIDA_TRANSECTO = DIR_SALIDA / "transecto_caudal.nc"      # transecto con q y v_eff
+ SALIDA_RESUMEN = DIR_SALIDA / "caudal_resumen.csv"         # tabla final de caudales
++SALIDA_BENCHMARK = DIR_SALIDA / "benchmark_recursos.csv"
++
++
++benchmark.reiniciar()
+ 
+ print("Datos de entrada:", DIR_DATOS)
+@@ -21,5 +29,5 @@
+ # Se comprueba de una vez que las entradas existen, antes de procesar nada. Si aparece FALTA,
+ # el notebook se lanzo desde otra carpeta.
+-for entrada in (ARCHIVO_VIDEO, ARCHIVO_BATIMETRIA):
++for entrada in (ARCHIVO_VIDEO, ARCHIVO_SECCION, ARCHIVO_PIV_USGS):
+     print(f"  {'OK   ' if entrada.exists() else 'FALTA'} {entrada.name}")
+ 
+@@ -40,30 +48,49 @@
+ plt.figure(figsize=(10, 6))
+ plt.imshow(frame)
+-plt.title("Primer fotograma - Ngwerere")
++plt.title("Primer fotograma - Sile Main Canal (vista cenital, ya estabilizado)")
+ plt.savefig(DIR_SALIDA / "fig1_fotograma.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+ # ---------------------------------------------------------------------------------------
+-#  >>> AJUSTABLE <<<  Puntos de control (obtenidos del dataset)
+-# ---------------------------------------------------------------------------------------
++#  >>> AJUSTABLE <<<  Los dos puntos de control y la distancia real entre ellos
++# ---------------------------------------------------------------------------------------
++# Columna de la imagen sobre la que se leen las dos lineas de agua: el centro del fotograma,
++# lejos de los bordes, donde la distorsion de lente es minima.
++COLUMNA_GCP = 1920
++# Fila de la linea de agua contra el muro superior.
++FILA_AGUA_SUP = 438
++# Fila de la linea de agua contra el muro inferior. Aqui no hay escalon de brillo (el
++# hormigon queda en sombra y se confunde con el agua), asi que se lee por el criterio fisico
++# de que el agua se mueve y el hormigon no: la desviacion tipica temporal por fila, sobre las
++# columnas 600-3400, cae de 7.1 a 1.3 niveles de gris entre las filas 1460 y 1465 y cruza el
++# punto medio en la 1463.
++FILA_AGUA_INF = 1463
++# Ancho real de la lamina de agua entre esas dos lineas.  (obtenido del dataset)
++ANCHO_CANAL = 1.8288          # m, 6 ft exactos
++# ---------------------------------------------------------------------------------------
++
+ gcps = dict(
+-    # Coordenadas en pixeles [columna, fila] de los cuatro marcadores.
++
++    # para que el segmento sea perpendicular a los muros.
+     src=[
+-        [1421, 1001],
+-        [1251, 460],
+-        [421, 432],
+-        [470, 607],
++        [COLUMNA_GCP, FILA_AGUA_SUP],
++        [COLUMNA_GCP, FILA_AGUA_INF],
+     ],
+-    # Las mismas coordenadas en UTM 35S [este, norte]. El ORDEN debe coincidir con src.
++
++    # cruzando el canal. El eje x queda a lo largo del canal.
+     dst=[
+-        [642735.8076, 8304292.119],
+-        [642737.5823, 8304295.593],
+-        [642732.7864, 8304298.425],
+-        [642732.6705, 8304296.858],
++        [0.0, 0.0],
++        [0.0, ANCHO_CANAL],
+     ],
+     h_ref=0.0,   # nivel local de referencia durante el video (0 al procesar un solo video)
+-    z_0=1182.2,  # cota absoluta del agua en metros; se usa luego para calcular profundidades
++    z_0=0.0,
+ )
+-# ---------------------------------------------------------------------------------------
++
++ANCHO_CANAL_PX = FILA_AGUA_INF - FILA_AGUA_SUP
++ESCALA = ANCHO_CANAL / ANCHO_CANAL_PX
++print(f"Ancho del canal en la imagen: {ANCHO_CANAL_PX} px")
++print(f"Escala resultante:            {ESCALA * 1000:.3f} mm/px")
++print(f"Incertidumbre si la linea de agua se lee con 5 px de error: "
++      f"{100 * 5 / ANCHO_CANAL_PX:.2f} % en el caudal")
+ 
+ plt.figure(figsize=(16, 9))
+@@ -77,18 +104,23 @@
+ plt.show()
+ 
++import numpy as np
++
+ # ---------------------------------------------------------------------------------------
+ #  >>> AJUSTABLE <<<  Malla de reproyeccion y area de interes
+ # ---------------------------------------------------------------------------------------
+-# Resolucion de la imagen ortorrectificada: 0.01 m/pixel = 1 cm por pixel.
+-RESOLUCION = 0.01             # m/px
+-# Ventana de interrogacion del PIV: 25 pixeles = 25 cm de lado con la resolucion anterior.
+-VENTANA_PIV = 25              # px
+-# Cuatro esquinas del area de interes, en pixeles [columna, fila].
+-# No hace falta que formen un rectangulo: pyorc ajusta uno en coordenadas reales.
++# Resolucion de la imagen ortorrectificada. 0.004 m/px deja el canal en ~457 px de ancho.
++RESOLUCION = 0.004            # m/px
++# Ventana de interrogacion del PIV, en pixeles reproyectados. 32 px = 12.8 cm.
++VENTANA_PIV = 32              # px
++
++# los bordes, donde la distorsion de la lente del dron es mayor y no hay modelo para corregirla.
++COLUMNA_INI, COLUMNA_FIN = 600, 3400
++
++# dentro de cada linea de agua para que las ventanas de interrogacion no toquen el muro.
+ ESQUINAS_AOI = [
+-    [292, 817],
+-    [50, 166],
+-    [1200, 236],
+-    [1600, 834],
++    [COLUMNA_INI, FILA_AGUA_SUP + 12],
++    [COLUMNA_FIN, FILA_AGUA_SUP + 12],
++    [COLUMNA_FIN, FILA_AGUA_INF - 10],
++    [COLUMNA_INI, FILA_AGUA_INF - 10],
+ ]
+ # ---------------------------------------------------------------------------------------
+@@ -96,12 +128,18 @@
+ # height y width se toman del propio fotograma para no escribirlos a mano.
+ cam_config = pyorc.CameraConfig(
+-    height=frame.shape[0],   # 1080 filas
+-    width=frame.shape[1],    # 1920 columnas
++    height=frame.shape[0],   # 2160 filas
++    width=frame.shape[1],    # 3840 columnas
+     gcps=gcps,               # los puntos de control definidos arriba
+-    crs=32735,               # EPSG:32735 = UTM zona 35S, la zona de Lusaka (Zambia)
++    crs=None,
+ )
+ cam_config.set_bbox_from_corners(ESQUINAS_AOI)
+ cam_config.resolution = RESOLUCION
+ cam_config.window_size = VENTANA_PIV
++
++
++x_bbox, y_bbox = np.array(cam_config.bbox.exterior.coords).T
++print(f"Area de interes: {x_bbox.max() - x_bbox.min():.2f} m a lo largo x "
++      f"{y_bbox.max() - y_bbox.min():.2f} m de ancho")
++print(f"  vectores a lo ancho del canal: ~{int(ANCHO_CANAL / RESOLUCION / (VENTANA_PIV / 2))}")
+ 
+ plt.figure(figsize=(10, 6))
+@@ -133,10 +171,10 @@
+ da_rgb_proj_demo = da_rgb_demo.frames.project()
+ 
+-fig, axes = plt.subplots(1, 2, figsize=(14, 6))
++fig, axes = plt.subplots(2, 1, figsize=(13, 8))
+ axes[0].imshow(frame)
+-axes[0].set_title("Original (perspectiva de la camara)")
++axes[0].set_title("Original (fotograma completo del dron)")
+ # Aqui si se fuerza el calculo, porque hay que dibujar los pixeles.
+ da_rgb_proj_demo[0].frames.plot(ax=axes[1])
+-axes[1].set_title("Reproyectado (vista ortorrectificada, metros)")
++axes[1].set_title("Reproyectado: solo agua, en metros")
+ plt.tight_layout()
+ plt.savefig(DIR_SALIDA / "fig4_reproyeccion.png", dpi=110, bbox_inches="tight")
+@@ -146,17 +184,10 @@
+ 
+ # ---------------------------------------------------------------------------------------
+-#  >>> AJUSTABLE <<<  Cuanto video se procesa y que zona se considera fija
+-# ---------------------------------------------------------------------------------------
+-# 126 fotogramas a 30 fps = unos 4.2 s, suficiente para este caso.
+-N_FRAMES = 125
+-# Poligono en pixeles que envuelve la superficie del agua. Todo lo que queda FUERA se
+-# considera terreno inmovil: cualquier movimiento detectado ahi es temblor de la camara, y
+-# pyorc lo usa para corregir el resto de la imagen.
+-POLIGONO_ESTABILIZAR = [
+-    [150, 0],
+-    [500, 1079],
+-    [1750, 1079],
+-    [900, 0],
+-]
++#  >>> AJUSTABLE <<<  Cuanto video se procesa
++# ---------------------------------------------------------------------------------------
++
++# cuestan tiempo y memoria de forma casi lineal.
++N_FRAMES = 250
++
+ # ---------------------------------------------------------------------------------------
+ 
+@@ -165,29 +196,30 @@
+ cam_config = pyorc.load_camera_config(str(SALIDA_CAM_CONFIG))
+ 
+-video = pyorc.Video(
+-    str(ARCHIVO_VIDEO),
+-    camera_config=cam_config,
+-    start_frame=0,
+-    end_frame=N_FRAMES,
+-    stabilize=POLIGONO_ESTABILIZAR,  # activa la correccion de temblor
+-    h_a=0.0,                         # nivel del agua igual al de la medicion de los GCPs
+-)
+-
+-# Sin method="rgb" los fotogramas salen en escala de grises, que es lo que necesita el PIV.
+-da = video.get_frames()
+-
+-# Resta el fondo (media de varios fotogramas) para realzar los trazadores en movimiento.
+-da_norm = da.frames.normalize()
+-
+-# Ortorrectifica cada fotograma a la malla del AOI. method="numpy" es la implementacion
+-# vectorizada; sin ese argumento se usa la de OpenCV.
+-da_norm_proj = da_norm.frames.project(method="numpy")
++with benchmark.medir("Parte 4: abrir video y get_frames", n_frames=N_FRAMES):
++    video = pyorc.Video(
++        str(ARCHIVO_VIDEO),
++        camera_config=cam_config,
++        start_frame=0,
++        end_frame=N_FRAMES,
++
++        h_a=0.0,                         # nivel del agua igual al de la medicion de los GCPs
++    )
++    # Sin method="rgb" los fotogramas salen en escala de grises, que es lo que necesita el PIV.
++    da = video.get_frames()
++
++with benchmark.medir("Parte 4: normalize + project", n_frames=N_FRAMES):
++    # Resta el fondo (media de varios fotogramas) para realzar los trazadores en movimiento.
++    da_norm = da.frames.normalize()
++    # Ortorrectifica cada fotograma a la malla del AOI. method="numpy" es la implementacion
++    # vectorizada; sin ese argumento se usa la de OpenCV.
++    da_norm_proj = da_norm.frames.project(method="numpy")
+ 
+ print("Calculando velocidades (PIV)...")
+-with ProgressBar():
++with benchmark.medir("Parte 4: get_piv", n_frames=N_FRAMES), ProgressBar():
+     piv = da_norm_proj.frames.get_piv()
+ 
+-# to_netcdf escribe el resultado a disco.
+-piv.to_netcdf(SALIDA_PIV_CRUDO)
++with benchmark.medir("Parte 4: to_netcdf", n_frames=N_FRAMES):
++    # to_netcdf escribe el resultado a disco.
++    piv.to_netcdf(SALIDA_PIV_CRUDO)
+ print(f"Velocimetria cruda guardada en: {SALIDA_PIV_CRUDO}")
+ 
+@@ -200,5 +232,5 @@
+ print(f"Dimensiones del resultado PIV: {dict(ds.sizes)}")
+ 
+-# Se reabre el video sin estabilizar para tener un fotograma en color como fondo.
++# Se reabre el video para tener un fotograma en color como fondo.
+ video_rgb = pyorc.Video(str(ARCHIVO_VIDEO), start_frame=0, end_frame=1)
+ # La config de camara se recupera del propio dataset, no hay que volver a construirla.
+@@ -211,6 +243,6 @@
+ ds_mean = ds.mean(dim="time", keep_attrs=True)
+ 
+-# Escala de color fija de 0 a 0.6 m/s.
+-NORMA_COLOR = Normalize(vmin=0.0, vmax=0.6, clip=False)
++
++NORMA_COLOR = Normalize(vmin=0.0, vmax=1.2, clip=False)
+ 
+ p = da_rgb_proj[0].frames.plot()          # fondo ortorrectificado en color
+@@ -222,39 +254,38 @@
+ import copy
+ 
+-import numpy as np
+-
+-# deepcopy para conservar intacto el dataset crudo y poder comparar despues.
+-ds_mask = copy.deepcopy(ds)
+-
+-# --- 1) mascaras sobre valores individuales ---
+-# corr: descarta ventanas cuya correlacion maxima es demasiado baja (no habia patron que seguir).
+-ds_mask.velocimetry.mask.corr(inplace=True)
+-# minmax: descarta velocidades fuera de un rango plausible.
+-ds_mask.velocimetry.mask.minmax(inplace=True)
+-
+-# --- 2) mascaras en el dominio del tiempo ---
+-# rolling: compara cada valor con una media movil temporal de su propia celda.
+-ds_mask.velocimetry.mask.rolling(inplace=True)
+-# outliers: descarta valores que se apartan demasiado de la media temporal de la celda.
+-ds_mask.velocimetry.mask.outliers(inplace=True)
+-# variance: descarta celdas cuya velocidad varia de forma inverosimil a lo largo del tiempo.
+-ds_mask.velocimetry.mask.variance(inplace=True)
+-
+-# angle: descartaria los vectores cuya direccion se aparta del flujo esperado (izquierda a
+-# derecha por defecto). Con angle_tolerance=0.5*pi la tolerancia es de 90 grados, holgada
+-# porque el agua rodea rocas y cambia de direccion.
+-# ATENCION: el ejemplo original (03_Plotting_and_masking_velocimetry_results) llama a esta
+-# mascara SIN inplace=True, a diferencia de todas las demas, asi que la calcula y la descarta:
+-# nunca se aplica al dataset que luego guarda. Se replica aqui ese mismo comportamiento para
+-# reproducir el caudal publicado de 0.164 m3/s.
+-mask_angle = ds_mask.velocimetry.mask.angle(angle_tolerance=0.5 * np.pi)
+-
+-# --- 3) mascaras que necesitan toda la serie o la vecindad espacial ---
+-# count: elimina las celdas que, tras los filtros anteriores, se quedaron con muy pocos valores
+-# validos respecto al total de pasos de tiempo.
+-ds_mask.velocimetry.mask.count(inplace=True)
+-# window_mean: compara cada celda con la media de su entorno de 5x5 (wdw=2) sobre el promedio
+-# temporal (reduce_time=True) y la descarta si se desvia mas de un 50 % (tolerance=0.5).
+-ds_mask.velocimetry.mask.window_mean(wdw=2, inplace=True, tolerance=0.5, reduce_time=True)
++with benchmark.medir("Parte 4b: mascaras de filtrado", n_frames=N_FRAMES):
++    # deepcopy para conservar intacto el dataset crudo y poder comparar despues.
++    ds_mask = copy.deepcopy(ds)
++
++
++    # radianes en sentido horario desde el eje vertical: 0.5*pi es "hacia +x".
++    angulo_esperado = 0.5 * np.pi if float(ds["v_x"].mean()) > 0 else 1.5 * np.pi
++    print(f"Velocidad media v_x = {float(ds['v_x'].mean()):+.3f} m/s "
++          f"-> angle_expected = {angulo_esperado:.3f} rad")
++
++    # --- 1) mascaras sobre valores individuales ---
++    # corr: descarta ventanas cuya correlacion maxima es demasiado baja.
++    ds_mask.velocimetry.mask.corr(inplace=True)
++    # minmax: descarta velocidades fuera de un rango plausible.
++    ds_mask.velocimetry.mask.minmax(inplace=True)
++
++    # --- 2) mascaras en el dominio del tiempo ---
++    # rolling: compara cada valor con una media movil temporal de su propia celda.
++    ds_mask.velocimetry.mask.rolling(inplace=True)
++    # outliers: descarta valores que se apartan demasiado de la media temporal de la celda.
++    ds_mask.velocimetry.mask.outliers(inplace=True)
++    # variance: descarta celdas cuya velocidad varia de forma inverosimil en el tiempo.
++    ds_mask.velocimetry.mask.variance(inplace=True)
++
++
++    ds_mask.velocimetry.mask.angle(angle_expected=angulo_esperado,
++                                   angle_tolerance=0.25 * np.pi, inplace=True)
++
++    # --- 3) mascaras que necesitan toda la serie o la vecindad espacial ---
++    # count: elimina las celdas que se quedaron con muy pocos valores validos.
++    ds_mask.velocimetry.mask.count(inplace=True)
++    # window_mean: compara cada celda con la media de su entorno de 5x5 (wdw=2) sobre el
++    # promedio temporal y la descarta si se desvia mas de un 50 % (tolerance=0.5).
++    ds_mask.velocimetry.mask.window_mean(wdw=2, inplace=True, tolerance=0.5, reduce_time=True)
+ 
+ # Promedio temporal del campo ya filtrado, para dibujar y para el mapa final.
+@@ -283,36 +314,50 @@
+ #  >>> AJUSTABLE <<<  Paso de velocidad superficial a media en la vertical
+ # ---------------------------------------------------------------------------------------
+-V_CORR = 0.9                  # valor por defecto de pyorc, el del ejemplo original
+-# ---------------------------------------------------------------------------------------
+-
+-# El CSV trae tres columnas: x (este UTM), y (norte UTM), z (cota del lecho en metros).
+-cross_section = pd.read_csv(ARCHIVO_BATIMETRIA)
+-print(f"Puntos batimetricos medidos: {len(cross_section)}")
+-
+-# El muestreo se hace sobre ds_mask (filtrado), NO sobre ds (crudo): es el punto donde el
+-# filtrado se traduce en el caudal.
+-transect = ds_mask.velocimetry.get_transect(
+-    cross_section["x"],
+-    cross_section["y"],
+-    cross_section["z"],
+-    crs=32735,   # el CSV esta en UTM 35S; conviene declararlo aunque coincida con el del dataset
+-    rolling=4,   # media movil de 4 pasos de tiempo antes de calcular los cuantiles
+-    # wdw=1 (por defecto) toma la mediana de una ventana de 3x3 celdas alrededor de cada punto.
+-)
+-
+-# Los puntos batimetricos se remuestrean a la resolucion de la malla de velocidades, de modo que
+-# el numero de puntos del transecto no coincide con el del CSV.
+-print(f"Puntos del transecto tras remuestrear: {transect.sizes['points']}")
++V_CORR = 0.92
++# ---------------------------------------------------------------------------------------
++
++
++seccion = pd.read_csv(ARCHIVO_SECCION)
++s_transecto = seccion["Progresiva"].to_numpy(float)
++prof_transecto = seccion["Prof"].to_numpy(float)
++N_VERTICALES = len(s_transecto)
++
++ES_CONTORNO = prof_transecto == 0.0
++AREA_SECCION = float(np.trapezoid(prof_transecto, s_transecto))
++print(seccion.to_string(index=False))
++print(f"\nArea de la seccion del CSV: {AREA_SECCION:.4f} m2")
++
++
++# constante y y recorriendo el ancho; z es la cota del lecho, el calado negado (z_0 = 0).
++X_TRANSECTO = float(0.5 * (x_bbox.min() + x_bbox.max()))
++x_pts = np.full(N_VERTICALES, X_TRANSECTO)
++y_pts = s_transecto
++z_pts = -prof_transecto
++
++with benchmark.medir("Parte 5: get_transect + get_q", n_frames=N_FRAMES):
++    # El muestreo se hace sobre ds_mask (filtrado), NO sobre ds (crudo): es el punto donde el
++    # filtrado se traduce en el caudal.
++    transect = ds_mask.velocimetry.get_transect(
++        x_pts.tolist(),
++        y_pts.tolist(),
++        z_pts.tolist(),
++        s=s_transecto.tolist(),
++        rolling=4,   # media movil de 4 pasos de tiempo antes de calcular los cuantiles
++        # wdw=1 (por defecto) toma la mediana de una ventana de 3x3 celdas alrededor de cada punto.
++    )
++    # get_q convierte velocidad superficial en caudal por unidad de ancho. Los huecos sin
++    # velocidad valida se rellenan ajustando un perfil logaritmico ("log_interp").
++    q_transect = transect.transect.get_q(v_corr=V_CORR, fill_method="log_interp")
++    # get_river_flow integra q a lo ancho de la seccion y anade river_flow al dataset.
++    q_transect.transect.get_river_flow()
++
++print(f"Transecto en x = {X_TRANSECTO:.3f} m, {transect.sizes['points']} puntos")
+ print(f"Cuantiles calculados: {transect['quantile'].values}")
+-
+-# get_q convierte velocidad superficial en caudal por unidad de ancho. Los huecos sin velocidad
+-# valida se rellenan ajustando un perfil logaritmico ("log_interp"); con "zeros" valdrian 0 m/s
+-# y el caudal quedaria subestimado.
+-q_transect = transect.transect.get_q(v_corr=V_CORR, fill_method="log_interp")
+-# get_river_flow integra q a lo ancho de la seccion y anade river_flow al dataset.
+-q_transect.transect.get_river_flow()
+ 
+ # quantile=0.5 es la mediana.
+ q_med = q_transect.sel(quantile=0.5)
++v_eff = q_med["v_eff"].values
++v_eff_medida = q_med["v_eff_nofill"].values
++medida = np.isfinite(v_eff_medida) & ~ES_CONTORNO
+ 
+ # scoords es la distancia acumulada a lo largo del transecto, en metros desde una orilla.
+@@ -329,9 +374,9 @@
+                   where=q_med["zcoords"].values < z_0,
+                   color="lightsteelblue", alpha=0.6, label="Seccion mojada")
+-ax_z.plot(s, q_med["zcoords"].values, "k-", lw=1.5, label="Lecho (batimetria)")
++ax_z.plot(s, q_med["zcoords"].values, "k-", lw=1.5, label="Lecho (seccion del aforo)")
+ ax_z.axhline(z_0, color="b", ls=":", lw=1.5, label=f"Nivel del agua (z_0 = {z_0} m)")
+ ax_z.set_ylabel("Elevacion (m)")
+ ax_z.set_title("Perfil transversal y velocidad efectiva (mediana)")
+-ax_z.legend(loc="upper left", fontsize=8)
++ax_z.legend(loc="lower left", fontsize=8)
+ ax_z.grid(True, alpha=0.3)
+ 
+@@ -339,8 +384,8 @@
+ ax_v = ax_z.twinx()
+ # v_eff: velocidad perpendicular al transecto, ya con los huecos rellenados.
+-ax_v.plot(s, q_med["v_eff"].values, "r-o", ms=3, lw=1.5, label="v_eff (rellenada)")
++ax_v.plot(s, v_eff, "r-o", ms=3, lw=1.5, label="v_eff (rellenada)")
+ # v_eff_nofill: solo los puntos donde realmente hubo medida valida. Los huecos delatan cuanta
+ # parte del perfil es interpolacion.
+-ax_v.plot(s, q_med["v_eff_nofill"].values, "g.", ms=9, label="v_eff medida")
++ax_v.plot(s, v_eff_medida, "g.", ms=9, label="v_eff medida")
+ ax_v.set_ylabel("Velocidad efectiva (m/s)", color="r")
+ ax_v.tick_params(axis="y", labelcolor="r")
+@@ -363,16 +408,10 @@
+ caudal = q_transect["river_flow"]
+ 
+-# Valores publicados por el ejemplo original, notebook
+-# 04_Extracting_crosssection_velocities_and_discharge, seccion transversal #1.
+-referencia = [0.07647424, 0.12637030, 0.16405959, 0.19231923, 0.22172388]
+-
+-print("=" * 62)
++
++print("=" * 52)
+ print("CAUDAL POR CUANTIL (m3/s)")
+-print("=" * 62)
+-print(f"{'cuantil':>8} {'este notebook':>15} {'ejemplo original':>18} {'dif.':>10}")
+-# zip recorre en paralelo los cuantiles calculados y los valores de referencia.
+-for qt, ref in zip(caudal["quantile"].values, referencia):
+-    val = float(caudal.sel(quantile=qt))
+-    print(f"{qt:>8.2f} {val:>15.4f} {ref:>18.4f} {val - ref:>+10.4f}")
++print("=" * 52)
++for qt in caudal["quantile"].values:
++    print(f"{qt:>8.2f} {float(caudal.sel(quantile=qt)):>12.4f}")
+ 
+ Q_VIDEO = float(caudal.sel(quantile=0.50))   # estimacion central
+@@ -380,30 +419,33 @@
+ q_95 = float(caudal.sel(quantile=0.95))      # limite superior
+ 
+-print("\n" + "-" * 62)
+-print(f"Caudal (mediana): {Q_VIDEO:.4f} m3/s   "
+-      f"[esperado {referencia[2]:.4f} m3/s, dif. {100 * (Q_VIDEO / referencia[2] - 1):+.1f} %]")
++print("-" * 52)
++print(f"Caudal (mediana): {Q_VIDEO:.4f} m3/s")
+ print(f"Incertidumbre:    P5 = {q_05:.4f} m3/s   P95 = {q_95:.4f} m3/s")
+-print("-" * 62)
+-
+-# Tabla final en CSV, comoda para comparar entre ejecuciones.
+-resumen = pd.DataFrame({
+-    "cuantil": caudal["quantile"].values,
+-    "caudal_m3s": caudal.values,
+-    "referencia_ejemplo_m3s": referencia,
++print(f"Velocidad media:  {Q_VIDEO / AREA_SECCION:.4f} m/s")
++print(f"Verticales con velocidad medida: {int(medida.sum())} de "
++      f"{int((~ES_CONTORNO).sum())} interiores (el resto, relleno log_interp)")
++
++
++perfil = pd.DataFrame({
++    "vertical": np.arange(N_VERTICALES),
++    "s_m": s_transecto,
++    "prof_m": prof_transecto,
++    "v_sup_medida_ms": v_eff_medida,
++    "v_sup_usada_ms": v_eff,
++    "q_especifico_m2s": q_med["q"].values,
++    "origen": np.where(ES_CONTORNO, "contorno (v=0 por convenio)",
++                       np.where(medida, "medida", "relleno log_interp")),
+ })
+-resumen["diferencia_m3s"] = resumen["caudal_m3s"] - resumen["referencia_ejemplo_m3s"]
+-resumen.to_csv(SALIDA_RESUMEN, index=False)
++perfil.to_csv(DIR_SALIDA / "perfil_transecto.csv", index=False)
+ 
+ # El transecto completo se guarda tambien en NetCDF: contiene v_eff, q, river_flow y todas las
+ # coordenadas del muestreo, por si se quiere reanalizar sin repetir el PIV.
+ q_transect.to_netcdf(SALIDA_TRANSECTO)
+-print(f"\nResumen guardado en:   {SALIDA_RESUMEN}")
+-print(f"Transecto guardado en: {SALIDA_TRANSECTO}")
+-resumen
++print(f"\nTransecto guardado en: {SALIDA_TRANSECTO}")
++perfil
+ 
+ # Mapa final: transecto sobre el campo de velocidades filtrado.
+-# El fondo se dibuja en proyeccion "local" (metros desde la esquina del AOI), asi que NO se
+-# pueden pasar las coordenadas UTM del CSV directamente a ax.plot(): caerian fuera del grafico.
+-# Se usa .transect.plot(), que ya conoce las coordenadas locales de cada punto muestreado.
++# El fondo se dibuja en proyeccion "local" (metros desde la esquina del AOI). Se usa
++# .transect.plot(), que ya conoce las coordenadas locales de cada punto muestreado.
+ p = da_rgb_proj[0].frames.plot(mode="local")  # fotograma ortorrectificado como fondo
+ ds_mean_mask.velocimetry.plot(ax=p.axes, mode="local", alpha=0.4, norm=NORMA_COLOR,
+@@ -416,4 +458,130 @@
+ plt.show()
+ 
++
++print("Maquina donde se han medido los tiempos:")
++for k, v in benchmark.entorno().items():
++    print(f"  {k}: {v}")
++
++tabla_recursos = benchmark.tabla()
++tabla_recursos.to_csv(SALIDA_BENCHMARK, index=False)
++print(f"\nTiempo total medido: {tabla_recursos['segundos'].sum():.1f} s")
++print(f"Pico de memoria del proceso: {tabla_recursos['ram_pico_mb'].max():.0f} MB")
++
++fig, ax = plt.subplots(figsize=(11, 4.5))
++orden = tabla_recursos.sort_values("segundos")
++ax.barh(orden["etapa"], orden["segundos"], color="steelblue")
++ax.set_xlabel("Tiempo de reloj (s)")
++ax.set_title("Coste de cada etapa")
++ax.grid(axis="x", alpha=0.3)
++for y, (seg, pct) in enumerate(zip(orden["segundos"], orden["pct_tiempo"])):
++    ax.text(seg, y, f"  {seg:.1f} s ({pct:.0f} %)", va="center", fontsize=8)
++plt.tight_layout()
++plt.savefig(DIR_SALIDA / "fig9_recursos.png", dpi=110, bbox_inches="tight")
++plt.show()
++tabla_recursos
++
++
++# ---------------------------------------------------------------------------------------
++#  Datos de validacion. Primera vez que aparecen en el notebook.
++#  Aforo con FlowTracker (ADV, por vadeo) del 2020-08-17 11:17. (obtenido del dataset)
++# ---------------------------------------------------------------------------------------
++Q_AFORO = 1.4362              # m3/s, caudal total medido
++AREA_AFORO = 1.799            # m2, area de la seccion segun el convenio mid-section
++V_MEDIA_AFORO = 0.7985        # m/s, velocidad media en la seccion
++V_ADV = np.array([0.0, 0.6298, 0.7973, 0.8132, 0.8121, 0.8220, 0.8518,   # m/s, media en la
++                  0.8508, 0.8458, 0.8094, 0.8146, 0.7365, 0.0])         # vertical
++# ---------------------------------------------------------------------------------------
++
++error_rel = 100 * (Q_VIDEO / Q_AFORO - 1)
++print("=" * 66)
++print(f"  LSPIV (este notebook)   : {Q_VIDEO:.4f} m3/s")
++print(f"  Aforo FlowTracker (ADV) : {Q_AFORO:.4f} m3/s   (incertidumbre ISO 4.2 %)")
++print(f"  Diferencia              : {error_rel:+.1f} %")
++print(f"  Banda del PIV           : P5 {100 * (q_05 / Q_AFORO - 1):+.1f} % .. "
++      f"P95 {100 * (q_95 / Q_AFORO - 1):+.1f} % frente al aforo")
++print(f"  Velocidad media         : {Q_VIDEO / AREA_SECCION:.4f} m/s  |  aforo {V_MEDIA_AFORO:.4f} m/s")
++print("=" * 66)
++
++v_media_vertical = v_eff * V_CORR
++comparacion = pd.DataFrame({
++    "vertical": np.arange(N_VERTICALES),
++    "s_m": s_transecto,
++    "v_sup": v_eff,
++    "v_media": v_media_vertical,
++    "v_media_ADV": V_ADV,
++    "dif_pct": np.where(V_ADV > 0, 100 * (v_media_vertical / np.where(V_ADV > 0, V_ADV, 1) - 1),
++                        np.nan),
++    "origen": perfil["origen"],
++})
++print(comparacion.to_string(index=False, float_format=lambda x: f"{x:8.4f}"))
++
++from scipy.io import loadmat
++
++mat = loadmat(str(ARCHIVO_PIV_USGS))
++# u_mean y v_mean en m/s; y_ground es la coordenada transversal. Se promedia a lo largo del canal.
++perfil_usgs = np.hypot(mat["u_mean"], mat["v_mean"]).mean(axis=1)
++y_usgs = mat["y_ground"][:, 0]
++orden_y = np.argsort(y_usgs)
++
++fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
++ax = axes[0]
++ax.plot(y_usgs[orden_y], perfil_usgs[orden_y], "-", color="tab:orange", lw=2,
++        label="LSPIV del USGS con PIVlab (vuelo 020)")
++ax.plot(s_transecto, v_eff, "r-o", ms=6, label="superficial (este notebook)")
++ax.plot(s_transecto, v_media_vertical, "m-s", ms=5, label=f"media en la vertical (x {V_CORR})")
++ax.plot(s_transecto, V_ADV, "ks--", ms=5, lw=1.2, label="ADV, media en la vertical")
++ax.set_xlabel("distancia desde la orilla izquierda (m)")
++ax.set_ylabel("velocidad (m/s)")
++ax.set_title("Perfiles transversales")
++ax.grid(alpha=0.3); ax.legend(fontsize=8)
++
++ax = axes[1]
++interior = ~ES_CONTORNO
++med = interior & medida
++rel = interior & ~medida
++ax.plot(V_ADV[med], v_media_vertical[med], "o", ms=9, color="tab:blue", label="vertical medida")
++ax.plot(V_ADV[rel], v_media_vertical[rel], "s", ms=9, color="orange", label="vertical rellenada")
++lim = [0.2, 1.0]
++ax.plot(lim, lim, "k--", lw=1, label="acuerdo perfecto")
++ax.plot(lim, [1.1 * v for v in lim], ":", color="gray", lw=1, label="+-10 %")
++ax.plot(lim, [0.9 * v for v in lim], ":", color="gray", lw=1)
++for i in np.where(interior)[0]:
++    ax.annotate(str(i), (V_ADV[i], v_media_vertical[i]), fontsize=7,
++                xytext=(4, 3), textcoords="offset points")
++ax.set_xlabel("velocidad media en la vertical, ADV (m/s)")
++ax.set_ylabel("velocidad media en la vertical, este notebook (m/s)")
++ax.set_title("Frente al ADV, vertical a vertical")
++ax.set_xlim(lim); ax.set_ylim(lim)
++ax.grid(alpha=0.3); ax.legend(fontsize=8)
++plt.tight_layout()
++plt.savefig(DIR_SALIDA / "fig10_comparacion.png", dpi=110, bbox_inches="tight")
++plt.show()
++
++# Las estadisticas se calculan solo sobre las verticales medidas: meter las rellenadas mediria
++# el relleno, no el metodo.
++sesgo = float(np.mean(v_media_vertical[med] - V_ADV[med]))
++rmse = float(np.sqrt(np.mean((v_media_vertical[med] - V_ADV[med]) ** 2)))
++v_corr_implicito = float(V_ADV[med].mean() / v_eff[med].mean())
++print(f"Sobre las {int(med.sum())} verticales medidas (se excluyen {int(rel.sum())} rellenadas):")
++print(f"  Sesgo medio frente al ADV: {sesgo:+.4f} m/s ({100 * sesgo / V_ADV[med].mean():+.1f} %)")
++print(f"  RMSE:                      {rmse:.4f} m/s")
++print(f"  v_corr implicito = {v_corr_implicito:.3f}  (el notebook uso {V_CORR}; es un "
++      "diagnostico, no una correccion)")
++
++resumen = pd.DataFrame([
++    dict(concepto="Caudal (este notebook)", valor=Q_VIDEO, unidad="m3/s"),
++    dict(concepto="Caudal aforo FlowTracker", valor=Q_AFORO, unidad="m3/s"),
++    dict(concepto="Diferencia", valor=error_rel, unidad="%"),
++    dict(concepto="Cuantil 0.05", valor=q_05, unidad="m3/s"),
++    dict(concepto="Cuantil 0.95", valor=q_95, unidad="m3/s"),
++    dict(concepto="Verticales medidas", valor=int(med.sum()), unidad="de 11"),
++    dict(concepto="Verticales rellenadas", valor=int(rel.sum()), unidad="de 11"),
++    dict(concepto="Sesgo frente al ADV (verticales medidas)", valor=sesgo, unidad="m/s"),
++    dict(concepto="v_corr usado", valor=V_CORR, unidad="-"),
++    dict(concepto="v_corr implicito segun el ADV", valor=v_corr_implicito, unidad="-"),
++])
++resumen.to_csv(SALIDA_RESUMEN, index=False)
++resumen
++
+ print(f"Contenido de {DIR_SALIDA}:\n")
+ for archivo in sorted(DIR_SALIDA.iterdir()):

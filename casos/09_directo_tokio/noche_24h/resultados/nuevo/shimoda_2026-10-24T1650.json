@@ -1,0 +1,135 @@
+{
+ "variante": "nuevo",
+ "camara": "shimoda",
+ "tramo": "2026-10-24T16:50",
+ "inicio_jst": "2026-10-24T16:49:56+09:00",
+ "modos": [
+  "dia",
+  "noche"
+ ],
+ "n_medidas": 111,
+ "aceptadas": 900,
+ "mediana": 0.9375184159364984,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 111,
+   "aceptadas": 20,
+   "v": 0.19053991782828716,
+   "q25": 0.17720918844014796,
+   "q75": 0.20239654249540293,
+   "coh": 0.42561181124000097,
+   "escalas": "m",
+   "motivos": {
+    "coherencia": 50,
+    "sin_textura": 40,
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.6236510815369125,
+   "q25": 0.5857437723563983,
+   "q75": 0.6601238595608883,
+   "coh": 0.5629070630995517,
+   "escalas": "r",
+   "motivos": {
+    "noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.7709397839717049,
+   "q25": 0.7171860269891734,
+   "q75": 0.8321303798805019,
+   "coh": 0.5740031392074358,
+   "escalas": "r",
+   "motivos": {
+    "noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.9467200781638161,
+   "q25": 0.8469406455395176,
+   "q75": 0.9896696454809006,
+   "coh": 0.5734014961622517,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 1.0447535411936706,
+   "q25": 1.0167419726226905,
+   "q75": 1.1068935799397885,
+   "coh": 0.5861183750698014,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.9953096976542175,
+   "q25": 0.9492267265179432,
+   "q75": 1.050000147023485,
+   "coh": 0.5332476506864603,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.8827548247210645,
+   "q25": 0.8075665569442462,
+   "q75": 0.9393662966028276,
+   "coh": 0.526154610270246,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 0.9833455892785026,
+   "q25": 0.9071271357448221,
+   "q75": 1.031092497647633,
+   "coh": 0.5696347720342421,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 111,
+   "aceptadas": 110,
+   "v": 1.0088616528788197,
+   "q25": 0.9443325867708139,
+   "q75": 1.04920364432512,
+   "coh": 0.5254499619971851,
+   "escalas": "r",
+   "motivos": {
+    "sin_textura_esperando+noche_no_valida": 1
+   }
+  }
+ ],
+ "segundos_proceso": 609
+}

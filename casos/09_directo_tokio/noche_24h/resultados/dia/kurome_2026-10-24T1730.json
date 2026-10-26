@@ -1,0 +1,139 @@
+{
+ "variante": "dia",
+ "camara": "kurome",
+ "tramo": "2026-10-24T17:30",
+ "inicio_jst": "2026-10-24T17:29:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 60,
+ "mediana": 0.9284534168027475,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 116,
+    "ambiguo": 5
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 21,
+   "v": 1.011527323189851,
+   "q25": 0.8549517648156628,
+   "q75": 1.0906186498833663,
+   "coh": 0.4193673561536542,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 62,
+    "v_max": 38
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 6,
+   "v": 0.909924773195643,
+   "q25": 0.7393486142430692,
+   "q75": 1.0745199807616093,
+   "coh": 0.41625666436883063,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 28,
+    "ambiguo": 87
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 4,
+   "v": 0.8969483303173725,
+   "q25": 0.87727691818356,
+   "q75": 0.9152716650002554,
+   "coh": 0.4283761874895778,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 34,
+    "ambiguo": 83
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 3,
+   "v": 1.124597234587162,
+   "q25": 1.075709245066566,
+   "q75": 1.1460636359829486,
+   "coh": 0.4429766745856143,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 66,
+    "ambiguo": 52
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 26,
+   "v": 0.8589524226548217,
+   "q25": 0.7754564127384486,
+   "q75": 1.083663955834818,
+   "coh": 0.43489866192821514,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 47,
+    "ambiguo": 48
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 97,
+    "ambiguo": 24
+   }
+  }
+ ],
+ "segundos_proceso": 1539
+}

@@ -1,0 +1,134 @@
+{
+ "variante": "dia",
+ "camara": "myoshoji",
+ "tramo": "2026-10-25T03:00",
+ "inicio_jst": "2026-10-25T02:59:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 85,
+ "mediana": 0.06870645834016191,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 43,
+   "v": 0.054532385435442414,
+   "q25": 0.053753802631167684,
+   "q75": 0.059090923253966136,
+   "coh": 0.41747893623230287,
+   "escalas": "l",
+   "motivos": {
+    "coherencia": 78
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 75,
+    "v_max": 46
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 42,
+   "v": 0.07866560020771123,
+   "q25": 0.07351033142851039,
+   "q75": 0.0860804858962784,
+   "coh": 0.4810844308609067,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 77,
+    "sin_textura": 2
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  }
+ ],
+ "segundos_proceso": 302
+}

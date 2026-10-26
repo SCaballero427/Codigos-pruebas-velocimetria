@@ -1,0 +1,134 @@
+{
+ "variante": "nuevo",
+ "camara": "kurome",
+ "tramo": "2026-10-24T17:10",
+ "inicio_jst": "2026-10-24T17:09:56+09:00",
+ "modos": [
+  "noche"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 125,
+ "mediana": 0.8005257073353657,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 2,
+   "v": 0.12076310511183583,
+   "q25": 0.11677648961157347,
+   "q75": 0.12474972061209817,
+   "coh": 0.41114310234403006,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 45,
+    "coherencia": 74
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 117,
+   "v": 0.80358325827925,
+   "q25": 0.7470346607350222,
+   "q75": 0.9050693454163172,
+   "coh": 0.48514258297807317,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 4
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 6,
+   "v": 0.6968718119231285,
+   "q25": 0.6635554399764824,
+   "q75": 0.741773189531795,
+   "coh": 0.43359974031746273,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 111,
+    "sin_textura": 4
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  }
+ ],
+ "segundos_proceso": 2450
+}

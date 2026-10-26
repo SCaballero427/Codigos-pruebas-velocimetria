@@ -74,6 +74,11 @@
       el canal es prismatico, el rayo se intersecta en el plano (y, z) con
       cada tramo y gana el primer corte con t > 0; asi se resuelven tambien
       las ocultaciones de un talud sobre el agua.
+      El nivel real del agua no se conoce: d es un tirante supuesto que solo
+      fija el plano donde se calculan la resolucion y el STIV, y T solo se
+      usa para dibujar ese agua. Ningun criterio depende de T: la cobertura
+      se juzga de borde a borde (B, medido) y las lineas de busqueda van
+      sobre la plantilla b, que queda bajo el agua con cualquier nivel.
 
  (F6) RESOLUCION EN EL AGUA (GSD). Derivando F3 respecto a la coordenada e
       del mundo (e = x a lo largo del flujo, e = y a lo ancho):
@@ -119,8 +124,9 @@
  (F12) COBERTURA. Un punto P0 + s e esta en la imagen si cumple
           X > 0,   W/2 X +- k_h X_r >= 0,   H/2 X -+ k_v X_a >= 0
        y como X, X_r, X_a son lineales en s, cada condicion es A s + B >= 0:
-       el tramo visible de una recta es un intervalo exacto. El ancho de
-       agua entero se ve en x si se ven las dos orillas (y = +-T/2, z = d).
+       el tramo visible de una recta es un intervalo exacto. El canal
+       entero se ve en x si se ven los dos bordes (y = +-B/2, z = H_c), que
+       no dependen del nivel del agua.
 
  (F13) Apuntado automatico: el eje optico pasa por el centro del canal en
        la seccion de medida (x_s, 0, d):
@@ -345,33 +351,32 @@ def _cortar(a, b):
 
 
 def cobertura(p, cam, segs):
-    """Alcances del encuadre sobre el agua y tramos del canal vistos enteros.
+    """Alcances del encuadre y tramos del canal vistos enteros. No usa el
+    ancho de agua, que depende del nivel (desconocido).
 
     Devuelve un diccionario con:
-      cerca, lejos  distancia x del agua en el borde inferior y superior de la
-                    columna central (lejos = inf si esa columna ve el cielo);
-      agua_entera   intervalo de x con las dos orillas del agua en la imagen;
+      cerca, lejos  distancia x en el plano del tirante supuesto del borde
+                    inferior y superior de la columna central (lejos = inf
+                    si esa columna ve el cielo);
       canal_entero  intervalo de x con los dos bordes del canal en la imagen;
-      y_seccion     intervalo de y del agua visible en la seccion x_s;
-      orillas_ok    las dos orillas de la seccion se ven y no estan tapadas.
+      y_seccion     intervalo de y visible a la altura de los bordes en la
+                    seccion x_s;
+      bordes_ok     los dos bordes de la seccion se ven y no estan tapados.
     """
-    T, B = anchos(p)
-    d, xs = p["tirante"], p["xs"]
+    B = anchos(p)[1]
+    d, hc, xs = p["tirante"], p["hc"], p["xs"]
     W, H = cam["W"], cam["H"]
     abajo = interseccion_agua(cam, rayo(cam, W / 2.0, H), d)
     arriba = interseccion_agua(cam, rayo(cam, W / 2.0, 0.0), d)
     ex, ey = (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)
-    agua = _cortar(intervalo(cam, (0.0, -T / 2.0, d), ex, 0.0, LEJOS),
-                   intervalo(cam, (0.0, T / 2.0, d), ex, 0.0, LEJOS))
-    canal = _cortar(intervalo(cam, (0.0, -B / 2.0, p["hc"]), ex, 0.0, LEJOS),
-                    intervalo(cam, (0.0, B / 2.0, p["hc"]), ex, 0.0, LEJOS))
-    ysec = intervalo(cam, (xs, 0.0, d), ey, -LEJOS, LEJOS)
-    orillas = all(en_imagen(cam, proyectar(cam, P)) and es_visible(cam, segs, P)
-                  for P in ((xs, -T / 2.0, d), (xs, T / 2.0, d)))
+    canal = _cortar(intervalo(cam, (0.0, -B / 2.0, hc), ex, 0.0, LEJOS),
+                    intervalo(cam, (0.0, B / 2.0, hc), ex, 0.0, LEJOS))
+    ysec = intervalo(cam, (xs, 0.0, hc), ey, -LEJOS, LEJOS)
+    bordes = all(en_imagen(cam, proyectar(cam, P)) and es_visible(cam, segs, P)
+                 for P in ((xs, -B / 2.0, hc), (xs, B / 2.0, hc)))
     return dict(cerca=abajo[0] if abajo else None,
                 lejos=arriba[0] if arriba else float("inf"),
-                agua_entera=agua, canal_entero=canal,
-                y_seccion=ysec, orillas_ok=orillas)
+                canal_entero=canal, y_seccion=ysec, bordes_ok=bordes)
 
 
 def huella(cam, cota, alcance, n=24):
@@ -470,12 +475,14 @@ def orientar(p, xs):
 
 def lineas_busqueda(p):
     """Lineas de busqueda paralelas al flujo, centradas en la seccion x_s y
-    repartidas en el centro de n franjas iguales del ancho de agua."""
-    T = anchos(p)[0]
+    repartidas en el centro de n franjas iguales de la plantilla: el ancho
+    de agua no se conoce, pero sobre la plantilla hay agua con cualquier
+    nivel."""
+    b = p["b"]
     n, L, xs, d = p["n_lineas"], p["largo"], p["xs"], p["tirante"]
     lineas = []
     for i in range(n):
-        y = -T / 2.0 + T * (i + 0.5) / n
+        y = -b / 2.0 + b * (i + 0.5) / n
         lineas.append(dict(n=i + 1, y=y, A=(xs - L / 2.0, y, d),
                            B=(xs + L / 2.0, y, d)))
     return lineas
@@ -483,10 +490,11 @@ def lineas_busqueda(p):
 
 def cabe_seccion(p):
     """¿Caben enteras en la imagen (con margen) y sin tapar todas las lineas
-    de busqueda y las dos orillas de la seccion? Devuelve (ok, motivos)."""
+    de busqueda y los dos bordes del canal en la seccion? Devuelve (ok,
+    motivos)."""
     cam = camara(p)
     segs = segmentos(p)
-    T = anchos(p)[0]
+    B = anchos(p)[1]
     margen = MARGEN_IMAGEN * min(cam["W"], cam["H"])
     motivos = []
     if p["xs"] - p["largo"] / 2.0 < p["x_puente"] - 1e-9:
@@ -501,11 +509,11 @@ def cabe_seccion(p):
                 break
     if fuera:
         motivos.append("no se ven enteras: %s" % ", ".join(fuera))
-    for lado, y in (("izquierda", -T / 2.0), ("derecha", T / 2.0)):
-        P = (p["xs"], y, p["tirante"])
+    for lado, y in (("izquierdo", -B / 2.0), ("derecho", B / 2.0)):
+        P = (p["xs"], y, p["hc"])
         if not (en_imagen(cam, proyectar(cam, P), margen)
                 and es_visible(cam, segs, P)):
-            motivos.append("no se ve la orilla %s" % lado)
+            motivos.append("no se ve el borde %s" % lado)
     return not motivos, motivos
 
 
@@ -836,8 +844,7 @@ def informe(q, a, aviso=None):
     L = []
     add = L.append
     cam, cob, lineas = a["cam"], a["cob"], a["lineas"]
-    T, B = anchos(q)
-    Hw = q["zcam"] - q["tirante"]
+    B = anchos(q)[1]
     validas = [ln for ln in lineas if ln["vel"]]
 
     add("1. CAMARA Y MONTAJE                            (F1, F2, F13)")
@@ -851,12 +858,12 @@ def informe(q, a, aviso=None):
     add("   IFOV H / V            : %.3f / %.3f mrad"
         % (ifov_mrad(q["fov_h"], q["res_h"]), ifov_mrad(q["fov_v"],
                                                         q["res_v"])))
-    add("   Camara                : %.2f m sobre el fondo, %.2f m sobre el agua,"
-        " %+.2f m del eje" % (q["zcam"], Hw, q["ycam"]))
+    add("   Camara                : %.2f m sobre el fondo del canal,"
+        " %+.2f m del eje" % (q["zcam"], q["ycam"]))
     if "h_puente" in q:
-        add("   En el puente          : piso a %.2f m de la plantilla, camara"
-            " %.2f m por encima del piso"
-            % (q["hc"] + q["h_puente"], q["h_mastil"]))
+        add("   Altura sobre el fondo : %.2f (plantilla al borde inferior del"
+            " puente) + %.2f (puente) + %.2f (camara sobre el piso) = %.2f m"
+            % (q["hc"], q["h_puente"], q["h_mastil"], q["zcam"]))
     add("   Mira hacia            : %s" % q["mira"])
     add("   Inclinacion / giro    : %.1f / %+.1f grados  (%s)"
         % (q["incl"], q["giro"], "apuntado automatico al centro de la seccion"
@@ -864,28 +871,28 @@ def informe(q, a, aviso=None):
 
     add("")
     add("2. CANAL                                       (F5)")
-    add("   Trapecio: plantilla %.2f m, talud %.2f:1, bordes a %.2f m"
-        % (q["b"], q["m"], q["hc"]))
-    add("   Tirante %.2f m -> ancho de agua %.2f m, area mojada %.2f m2;"
-        " borde a borde %.2f m"
-        % (q["tirante"], T, (q["b"] + q["m"] * q["tirante"]) * q["tirante"], B))
+    add("   Trapecio: borde a borde %.2f m, bordes (y borde inferior del"
+        " puente) a %.2f m de la plantilla" % (B, q["hc"]))
+    add("   Talud %.2f:1 (supuesto) -> plantilla %.2f m, donde van las lineas"
+        % (q["m"], q["b"]))
+    add("   Tirante supuesto %.2f m: solo fija el plano del agua para la"
+        " resolucion y el STIV;" % q["tirante"])
+    add("   el ancho de lamina no se usa porque no se conoce el nivel real.")
 
     add("")
     add("3. COBERTURA                                   (F12)")
-    add("   Agua visible en la columna central: desde %s hasta %s"
+    add("   Columna central (tirante supuesto): desde %s hasta %s"
         % ("--" if cob["cerca"] is None else "%.1f m" % cob["cerca"],
            "el horizonte" if math.isinf(cob["lejos"])
            else "%.1f m" % cob["lejos"]))
-    add("   Ancho de agua entero en la imagen : %s"
-        % _intervalo_txt(cob["agua_entera"]))
-    add("   Canal entero de borde a borde     : %s"
+    add("   Canal entero de borde a borde      : %s"
         % _intervalo_txt(cob["canal_entero"]))
     ys = cob["y_seccion"]
-    add("   En la seccion (x = %.2f m) se ve el agua de y = %s a %s"
-        " (orillas en +-%.2f m): %s"
+    add("   En la seccion (x = %.2f m) se ve a la altura de los bordes de"
+        " y = %s a %s (bordes en +-%.2f m): %s"
         % (q["xs"], "--" if ys is None else "%.2f" % max(ys[0], -LEJOS),
-           "--" if ys is None else "%.2f" % min(ys[1], LEJOS), T / 2.0,
-           "ANCHO COMPLETO" if cob["orillas_ok"] else "INCOMPLETO"))
+           "--" if ys is None else "%.2f" % min(ys[1], LEJOS), B / 2.0,
+           "CANAL COMPLETO" if cob["bordes_ok"] else "INCOMPLETO"))
     add("   Seccion %s; lineas de %.1f m desde x = %.2f hasta %.2f m"
         % ("colocada automaticamente lo mas cerca posible del puente"
            if q["auto_seccion"] else "colocada a mano", q["largo"],
@@ -1117,16 +1124,18 @@ ENTRADAS_CAMARA = [
     ("fps", "Imagenes por segundo (fps)", "30", float),
 ]
 # Canal y puente de entradas/Medidas_canal_y_puente.pdf: 11.4 m entre bordes
-# con el tirante maximo, 3 m de la plantilla al arranque del puente y 0.85 m
-# de altura del puente.
+# con el tirante maximo, 3 m de la plantilla (fondo del canal, no la
+# superficie del agua) al borde inferior del puente y 0.85 m de altura del
+# puente. El puente apoya sobre los bordes, asi que hc es a la vez la altura
+# de los bordes y la del borde inferior del puente sobre la plantilla.
 # >>> AJUSTABLE <<< Sin medir: el talud (1.5:1 es un valor tipico; de el sale
 # la plantilla), el tirante de operacion (2.0 m), la posicion lateral de la
 # camara (centro del claro) y la distancia minima de las lineas al puente.
 ENTRADAS_CANAL = [
     ("ancho_bordes", "Ancho entre bordes (m)", "11.4", float),
     ("m", "Talud (horizontal por 1 vertical)", "1.5", float),
-    ("hc", "Altura de los bordes sobre la plantilla (m)", "3", float),
-    ("tirante", "Tirante del agua (m)", "2.0", float),
+    ("hc", "Plantilla al borde inferior del puente (m)", "3", float),
+    ("tirante", "Tirante supuesto del agua (m)", "2.0", float),
 ]
 ENTRADAS_MONTAJE = [
     ("h_puente", "Altura del puente sobre los bordes (m)", "0.85", float),
@@ -1697,7 +1706,9 @@ class App:
         c.create_line(X(x_min), Z(q["hc"]), X(x_max), Z(q["hc"]),
                       fill="#999", dash=(4, 3))
         c.create_text(X(x_max) - 2, Z(q["hc"]) - 7, anchor="e",
-                      text="bordes", font=("TkDefaultFont", 7), fill="#777")
+                      text="bordes y borde inferior del puente: %.2f m sobre"
+                      " la plantilla" % q["hc"], font=("TkDefaultFont", 7),
+                      fill="#777")
         # Pasarela en corte: una armadura a cada lado del piso, arriostradas
         # en X, y la baranda encima de cada armadura.
         z0, z1 = q["hc"], q["hc"] + hp
@@ -1737,20 +1748,21 @@ class App:
         c.create_rectangle(X(0) - 6, Z(q["zcam"]) - 4, X(0) + 6,
                            Z(q["zcam"]) + 4, fill="#333", outline="")
         c.create_text(X(0) + 10, Z(q["zcam"]) - 2, anchor="w",
-                      text="%.2f m sobre el agua, inclinacion %.1f grados"
-                      % (q["zcam"] - d, q["incl"]),
+                      text="%.2f m sobre el fondo, inclinacion %.1f grados"
+                      % (q["zcam"], q["incl"]),
                       font=("TkDefaultFont", 8))
         c.create_text(X(-ANCHO_PISO / 2), Z(z_mano) - 9, text="puente",
                       font=("TkDefaultFont", 7), fill=COLOR_PUENTE)
 
     def pintar_planta(self, q, a):
         """Planta (x hacia arriba): canal, puente, camara, huella del campo
-        de vision sobre el agua, tramo con el ancho entero visible y lineas."""
+        de vision sobre el agua, tramo con el canal entero visible y
+        lineas."""
         c = self.c_planta
         c.delete("all")
         w, h = int(c["width"]), int(c["height"])
         cam = a["cam"]
-        T, B = anchos(q)
+        B, b = anchos(q)[1], q["b"]
         mg = 14
         x_min, x_max = -3.0, self._alcance_vista(q, a)
         y_lim = max(B / 2.0 + 2.0, abs(q["ycam"]) + 1.0)
@@ -1762,7 +1774,7 @@ class App:
         c.create_rectangle(0, 0, w, h, fill=COLOR_TERRENO, outline="")
         c.create_rectangle(Y(-B / 2), X(x_max + 50), Y(B / 2), X(0),
                            fill=COLOR_TALUD, outline="")
-        c.create_rectangle(Y(-T / 2), X(x_max + 50), Y(T / 2), X(0),
+        c.create_rectangle(Y(-b / 2), X(x_max + 50), Y(b / 2), X(0),
                            fill=COLOR_AGUA, outline="")
         ya, yb = -B / 2 - APOYO_PUENTE, B / 2 + APOYO_PUENTE
         c.create_rectangle(Y(ya), X(0), Y(yb), X(-ANCHO_PISO),
@@ -1794,7 +1806,7 @@ class App:
             c.create_polygon([coord for x, y in pts for coord in (Y(y), X(x))],
                              outline="#d07020", fill="", width=2, dash=(4, 2))
 
-        iv = a["cob"]["agua_entera"]
+        iv = a["cob"]["canal_entero"]
         if iv is not None:
             hi = min(iv[1], x_max + 50)
             c.create_line(Y(y_lim) - 6, X(iv[0]), Y(y_lim) - 6, X(hi),
@@ -1802,11 +1814,11 @@ class App:
         for ln in a["lineas"]:
             c.create_line(Y(ln["y"]), X(ln["A"][0]), Y(ln["y"]), X(ln["B"][0]),
                           fill=COLORES[ln["calif"]], width=3)
-        c.create_line(Y(-T / 2), X(q["xs"]), Y(T / 2), X(q["xs"]),
+        c.create_line(Y(-B / 2), X(q["xs"]), Y(B / 2), X(q["xs"]),
                       fill="#fff", dash=(3, 2))
 
         # Sentido del flujo.
-        ya, xa = T / 2.0 - 0.6, min(x_max * 0.9, q["xs"] + q["largo"] + 3)
+        ya, xa = B / 2.0 - 0.6, min(x_max * 0.9, q["xs"] + q["largo"] + 3)
         dxa = -2.0 if q["mira"] == "aguas arriba" else 2.0
         c.create_line(Y(ya), X(xa), Y(ya), X(xa + dxa), arrow="last",
                       fill="#1b4f72", width=2)
@@ -1820,11 +1832,12 @@ class App:
                       fill="#444", text="naranja: campo de vision sobre el "
                                         "agua")
         c.create_text(w - 4, 8, anchor="e", font=("TkDefaultFont", 7),
-                      fill="#2a9d4b", text="verde: ancho entero visible")
+                      fill="#2a9d4b", text="verde: canal entero visible")
 
     def pintar_seccion(self, q, a):
-        """Seccion transversal vista desde el puente: trapecio, agua,
-        camara y tramo de agua visible en la seccion de medida."""
+        """Seccion transversal vista desde el puente: trapecio, agua con el
+        tirante supuesto, camara y tramo visible a la altura de los bordes
+        en la seccion de medida."""
         c = self.c_seccion
         c.delete("all")
         w, h = int(c["width"]), int(c["height"])
@@ -1855,21 +1868,21 @@ class App:
             for y in (max(ys[0], -y_lim), min(ys[1], y_lim)):
                 c.create_line(Y(cy), Z(cz), Y(y), Z(cota_superficie(q, y)),
                               fill="#aaa", dash=(3, 3))
-            lo, hi = max(ys[0], -T / 2), min(ys[1], T / 2)
+            lo, hi = max(ys[0], -B / 2), min(ys[1], B / 2)
             if lo < hi:
-                c.create_line(Y(lo), Z(d), Y(hi), Z(d), fill="#2a9d4b",
+                c.create_line(Y(lo), Z(hc), Y(hi), Z(hc), fill="#2a9d4b",
                               width=4)
-        for y0, y1 in ((-T / 2, ys[0] if ys else T / 2),
-                       (ys[1] if ys else T / 2, T / 2)):
+        for y0, y1 in ((-B / 2, ys[0] if ys else B / 2),
+                       (ys[1] if ys else B / 2, B / 2)):
             if y1 > y0 + 1e-6:
-                c.create_line(Y(y0), Z(d), Y(min(y1, T / 2)), Z(d),
+                c.create_line(Y(y0), Z(hc), Y(min(y1, B / 2)), Z(hc),
                               fill="#d64545", width=4)
         for ln in a["lineas"]:
             c.create_oval(Y(ln["y"]) - 3, Z(d) - 3, Y(ln["y"]) + 3,
                           Z(d) + 3, fill=COLORES[ln["calif"]], outline="")
         c.create_text(4, h - 8, anchor="w", font=("TkDefaultFont", 7),
-                      fill="#444", text="verde: agua visible  rojo: fuera  "
-                                        "T = %.2f m" % T)
+                      fill="#444", text="verde: visible  rojo: fuera  "
+                                        "B = %.2f m" % B)
 
     def pintar_vista(self, q, a):
         """Imagen simulada con las guias: distancias, orillas, bordes,
@@ -1899,11 +1912,8 @@ class App:
                 c.create_line([k for u, v in tramo for k in (U(u), V(v))],
                               **kw)
 
-        T, B = anchos(q)
-        d = q["tirante"]
+        B, hc = anchos(q)[1], q["hc"]
         x_far = 1.5 * self._alcance_vista(q, a) + 50
-        for y in (-T / 2, T / 2):
-            linea((0, y, d), (x_far, y, d), fill="#7fd4ff", dash=(4, 3))
         for y in (-B / 2, B / 2):
             linea((0, y, q["hc"]), (x_far, y, q["hc"]), fill="#e0e0e0",
                   dash=(2, 3))
@@ -1911,7 +1921,7 @@ class App:
         k = 1
         while k * paso < x_far:
             x = k * paso
-            tr = tramos_en_imagen(cam, (x, -T / 2, d), (x, T / 2, d), n=12)
+            tr = tramos_en_imagen(cam, (x, -B / 2, hc), (x, B / 2, hc), n=12)
             for tramo in tr:
                 c.create_line([kk for u, v in tramo for kk in (U(u), V(v))],
                               fill="#cccccc")
@@ -1920,7 +1930,7 @@ class App:
                 c.create_text(U(u) + 3, V(v), anchor="w", text="%g m" % x,
                               fill="#eeeeee", font=("TkDefaultFont", 7))
             k += 1
-        linea((q["xs"], -T / 2, d), (q["xs"], T / 2, d), fill="#ffffff",
+        linea((q["xs"], -B / 2, hc), (q["xs"], B / 2, hc), fill="#ffffff",
               width=1, dash=(6, 3))
         for ln in a["lineas"]:
             linea(ln["A"], ln["B"], fill=COLORES[ln["calif"]], width=3)
@@ -2254,7 +2264,7 @@ def autocomprobacion():
         p = caso_sitio(tirante=tir)
         qs, avs = resolver(p)
         a_s = analizar(qs)
-        ok = ok and avs is None and a_s["ok"] and a_s["cob"]["orillas_ok"]
+        ok = ok and avs is None and a_s["ok"] and a_s["cob"]["bordes_ok"]
     check("caso real: canal de 11.4 m entero con la Hikvision",
           ok and abs(anchos(caso_sitio())[1] - 11.4) < 1e-9,
           "plantilla %.2f m" % caso_sitio()["b"])

@@ -367,10 +367,19 @@ asi que la comparacion con el nivel no dice nada en seco; lo que si salio:
   YouTube no da los formatos sin resolver un desafio en JavaScript. **El programa en directo todavia no
   usa deno**, asi que en un PC sin el formato antiguo puede no abrir los directos de YouTube.
 
+## Noche: 24 h grabadas de las cuatro camaras (2026-10-24/25): `noche_24h/`
+
+Ninguna camara mide de noche con valores coherentes con el dia al mismo nivel (9 variantes del proceso
+probadas), y el Myoshoji (en color con farolas, tomado por dia) y el Shimoda (destellos, -25 a -45 %)
+daban medidas falsas aceptadas. Ahora la noche se decide tambien por **la altura del sol** en cada
+camara (`SOL_NOCHE` = 0, coordenadas en `CAMARAS`) y el Shimoda lleva `medir_noche` = False: de noche
+las cuatro se abstienen. De dia, regresion identica. Nuevas opciones `--hora-inicio` y `--csv` para pasar
+una grabacion como si fuera el directo. Detalle en [noche_24h/README.md](noche_24h/README.md).
+
 ## Limites conocidos
 
-- **De noche, el Myoshoji no se mide** (`medir_noche` = False): con farolas no hay trazador visible de
-  la corriente. Para ALIAR, comprobar con la camara real que de noche se ve el agua fluir (iluminacion
+- **De noche, el Myoshoji y el Shimoda no se miden** (`medir_noche` = False) y el Kurome y el Akigawa no
+  miden (sin textura / coherencia): con farolas no hay trazador visible de la corriente (`noche_24h/`). Para ALIAR, comprobar con la camara real que de noche se ve el agua fluir (iluminacion
   infrarroja propia, sin destellos fijos) antes de fiarse de las medidas nocturnas.
 - De dia el Myoshoji emite a ~12 fps (duplicados alternos de 2 y 3), no a los 15 de `fps_camara`. Sin
   revisar si sesga.

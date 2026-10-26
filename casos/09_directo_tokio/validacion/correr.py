@@ -3,6 +3,7 @@ canal de motas, medir con la cascada de escalas, modo auto por saturacion), midi
 como el programa en directo. Solo cambia la geometria y los parametros POR CAMARA; los del metodo
 (bloques, coherencia, actividad, escalas...) se dejan como estan en el programa."""
 import os, sys, time, numpy as np, cv2
+from datetime import timedelta
 
 # el programa de verdad, no una copia: lo que se valida es exactamente lo que corre en directo
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -24,15 +25,21 @@ def correr(video, cuad, L, W, params, orientacion_auto=True, modo="auto", fin_s=
                  fin_s, verbose)
 
 
-def correr_camara(video, camara, modo="auto", fin_s=None, verbose=True, ajustes=None):
+def correr_camara(video, camara, modo="auto", fin_s=None, verbose=True, ajustes=None, inicio_s=0.0,
+                  hora_inicio=None):
     """Con los ajustes de una camara del programa (CAMARAS + su config_stiv_directo.json). `ajustes`
-    cambia valores por camara, como los "ajustes" de fuentes.json (p. ej. {"v_esperada": 1.0})."""
+    cambia valores por camara, como los "ajustes" de fuentes.json (p. ej. {"v_esperada": 1.0}).
+    `hora_inicio` (datetime con zona) es la hora real del primer fotograma: con ella la noche se decide
+    tambien por el sol, como en directo; sin ella, solo por la imagen."""
     sd.elegir_camara(camara, ajustes=ajustes)
-    return bucle(video, sd.cargar_config(), True, modo, fin_s, verbose)
+    return bucle(video, sd.cargar_config(), True, modo, fin_s, verbose, inicio_s, hora_inicio)
 
 
-def bucle(video, cfg, orientacion_auto, modo, fin_s, verbose):
+def bucle(video, cfg, orientacion_auto, modo, fin_s, verbose, inicio_s=0.0, hora_inicio=None):
     cap = cv2.VideoCapture(video)
+    if inicio_s:
+        # empezar a mitad de una grabacion larga (las .ts de 24 h); t y fin_s siguen en tiempo del video
+        cap.set(cv2.CAP_PROP_POS_MSEC, inicio_s * 1000.0)
     cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1 if orientacion_auto else 0)
     fps = cap.get(cv2.CAP_PROP_FPS)
     geom = sd.Geometria(cfg, fps)
@@ -48,11 +55,12 @@ def bucle(video, cfg, orientacion_auto, modo, fin_s, verbose):
         ok, f = cap.read()
         if not ok:
             break
-        t = n / fps
+        t = inicio_s + n / fps
         if fin_s and t > fin_s:
             break
         if modo_act is None:
-            modo_act = modo if modo != "auto" else ("noche" if sd.es_noche(geom, f) else "dia")
+            cuando = hora_inicio + timedelta(seconds=t) if hora_inicio else None
+            modo_act = modo if modo != "auto" else ("noche" if sd.es_noche(geom, f, cuando) else "dia")
             t_ult_modo = t
             if verbose:
                 print(f"  modo {modo_act} (saturacion {geom.saturacion(f):.1f})")
@@ -60,7 +68,7 @@ def bucle(video, cfg, orientacion_auto, modo, fin_s, verbose):
             # como ejecutar(): una lectura cada 5 s y cambio tras tres seguidas iguales (al anochecer la
             # camara pasa a infrarrojo); el STI se vacia porque mezclaria los dos procesos
             t_ult_modo = t
-            visto = "noche" if sd.es_noche(geom, f) else "dia"
+            visto = "noche" if sd.es_noche(geom, f, hora_inicio + timedelta(seconds=t) if hora_inicio else None) else "dia"
             if visto != modo_act:
                 repeticiones = repeticiones + 1 if visto == candidato else 1
                 candidato = visto

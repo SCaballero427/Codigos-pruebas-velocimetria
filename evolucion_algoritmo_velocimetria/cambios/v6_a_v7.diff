@@ -1,0 +1,695 @@
+--- v6_bradano_stiv
++++ v7_arrow_siembra
+@@ -19,9 +19,14 @@
+ 
+ # --- Entradas (nunca se modifican) ---
+-DIR_DATOS = buscar_datasets() / "data" / "RiverBradano"
+-ARCHIVO_VIDEO = DIR_DATOS / "Stabilised" / "Video" / "RiverBradano_24_fps_Stabilised.avi"
+-
+-# las velocidades no se abren hasta la Parte 7.
+-ARCHIVO_VALIDACION = DIR_DATOS / "Reference" / "Validation_Data_RiverBradano.xlsx"
++DIR_DATOS = buscar_datasets() / "data" / "RiverArrow"
++DIR_STAB = DIR_DATOS / "Stabilised"
++
++VIDEOS = {
++    "sin sembrar": DIR_STAB / "GoPro_Stable_trans_Unseeded" / "Video" / "Arrow_GoPro_Unseeded_Stabilised.avi",
++    "sembrado": DIR_STAB / "GoPro_stable_trans_seeded" / "Video" / "Arrow_GoPro_Seeded_Stabilised.avi",
++}
++ARCHIVO_VIDEO = VIDEOS["sin sembrar"]
++# De la hoja de validacion se leen en la Parte 2 SOLO las posiciones de las verticales.
++ARCHIVO_VALIDACION = DIR_DATOS / "Reference" / "Validation_Data_Arrow_GoPro.xlsx"
+ 
+ # --- Salidas ---
+@@ -32,5 +37,5 @@
+ SALIDA_CONFIG = DIR_SALIDA / "config.json"                 # configuracion congelada
+ SALIDA_PERFIL = DIR_SALIDA / "perfil_velocidades.csv"      # velocidad estacion por estacion
+-SALIDA_RESUMEN = DIR_SALIDA / "resumen.csv"
++SALIDA_RESUMEN = DIR_SALIDA / "resumen.csv"                # tabla final (no hay caudal)
+ SALIDA_BENCHMARK = DIR_SALIDA / "benchmark_recursos.csv"   # coste de cada etapa
+ 
+@@ -41,5 +46,5 @@
+ print("Salidas en:      ", DIR_SALIDA)
+ # Se comprueba de una vez que las entradas existen, antes de procesar nada.
+-for entrada in (ARCHIVO_VIDEO, ARCHIVO_VALIDACION):
++for entrada in (*VIDEOS.values(), ARCHIVO_VALIDACION):
+     print(f"  {'OK   ' if entrada.exists() else 'FALTA'} {entrada.name}")
+ 
+@@ -57,8 +62,5 @@
+ # OpenCV lee en BGR; matplotlib espera RGB.
+ frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+-
+-gris0 = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+-lo, hi = np.percentile(gris0, [1, 99.5])
+-frame_realce = np.clip((gris0 - lo) / (hi - lo) * 255, 0, 255).astype(np.uint8)
++ALTO_PX, ANCHO_PX = frame.shape[:2]
+ 
+ # Forma (filas, columnas, canales): las filas son la altura y las columnas el ancho.
+@@ -67,7 +69,27 @@
+ print(f"Fotogramas en el video: {N_TOTAL}")
+ 
+-fig, ax = plt.subplots(1, 2, figsize=(16, 5))
+-ax[0].imshow(frame); ax[0].set_title("Primer fotograma - rio Bradano, tal cual")
+-ax[1].imshow(frame_realce, cmap="gray"); ax[1].set_title("Con el contraste estirado: las particulas")
++
++def cargar(ruta):
++    """El video entero en gris (son ~100 fotogramas de 464x505: 23 MB)."""
++    cap = cv2.VideoCapture(str(ruta))
++    fs = []
++    while True:
++        ok, fr = cap.read()
++        if not ok:
++            break
++        fs.append(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY).astype(np.float32))
++    cap.release()
++    return np.stack(fs)
++
++
++pilas = {etq: cargar(ruta) for etq, ruta in VIDEOS.items()}
++fig, axes = plt.subplots(2, 2, figsize=(12, 12))
++for j, etq in enumerate(VIDEOS):
++    axes[0, j].imshow(pilas[etq][0], cmap="gray")
++    axes[0, j].set_title(f"Primer fotograma - {etq} ({len(pilas[etq])} fotogramas)")
++    im = axes[1, j].imshow(pilas[etq].std(axis=0), cmap="viridis", vmin=0, vmax=40)
++    axes[1, j].set_title(f"Desviacion tipica temporal - {etq}")
++    plt.colorbar(im, ax=axes[1, j], shrink=0.75)
++plt.tight_layout()
+ plt.savefig(DIR_SALIDA / "fig1_fotograma.png", dpi=110, bbox_inches="tight")
+ plt.show()
+@@ -79,60 +101,55 @@
+ # ---------------------------------------------------------------------------------------
+ # Escala de la imagen ortorrectificada, declarada por el Readme.txt.  (obtenido del dataset)
+-ESCALA = 0.009                # m/px
+-# Fila de la seccion de aforo.  (obtenido del dataset)
+-FILA_SECCION = 706
+-# Columnas donde el agua toca cada orilla en esa fila: el perfil de brillo cae de ~60 a < 1
+-# nivel de gris en pocos pixeles (figura de abajo). Solo situan el perfil.
+-COLUMNA_AGUA_IZQ, COLUMNA_AGUA_DER = 383, 1353
+-# Malla de estaciones: la del aforo (111 px = 1 m desde la columna 456), prolongada a la
+-# derecha hasta donde cabe dentro del agua.  (obtenido del dataset)
+-COLUMNA_ESTACION_0, PASO_ESTACION_PX, N_ESTACIONES = 456, 111, 9
+-# ---------------------------------------------------------------------------------------
+-
+-columnas_estaciones = COLUMNA_ESTACION_0 + PASO_ESTACION_PX * np.arange(N_ESTACIONES)
+-s_estaciones = (columnas_estaciones - COLUMNA_AGUA_IZQ) * ESCALA
+-MAPA_RECT = None
+-
+-# Las coordenadas de las verticales de validacion: SOLO las posiciones.
++ESCALA = 0.0174               # m/px
++# Margen al borde del fotograma: una muestra mas cerca toma valores de borde, no del agua.
++MARGEN_BORDE = 5              # px
++# ---------------------------------------------------------------------------------------
++
++
++# velocidad, no se lee aqui).  (obtenido del dataset)
+ _val = pd.read_excel(ARCHIVO_VALIDACION, header=None)
+-_fil = _val[_val[0].astype(str).str.startswith("Vert")]
+-COLUMNAS_VALIDACION = _fil[1].astype(int).to_numpy()
+-print(f"Escala declarada: {ESCALA * 1000:.2f} mm/px; separacion entre verticales de validacion "
+-      f"{np.diff(COLUMNAS_VALIDACION).mean():.0f} px = {np.diff(COLUMNAS_VALIDACION).mean() * ESCALA:.3f} m")
+-print(f"Ancho mojado: {(COLUMNA_AGUA_DER - COLUMNA_AGUA_IZQ) * ESCALA:.2f} m; "
+-      f"estaciones en las columnas {columnas_estaciones.tolist()}")
+-
+-banda_brillo = gris0[FILA_SECCION - 20:FILA_SECCION + 21].mean(axis=0)
+-fig, ax = plt.subplots(2, 1, figsize=(14, 8))
+-ax[0].imshow(frame_realce, cmap="gray")
+-ax[0].axhline(FILA_SECCION, color="c", lw=1)
+-for c in columnas_estaciones:
+-    ax[0].axvline(c, color="r" if c in COLUMNAS_VALIDACION else "orange", lw=1)
+-ax[0].set_title("Estaciones (rojas: verticales de validacion; naranjas: anadidas)")
+-ax[1].plot(banda_brillo, "k-", lw=0.8)
+-for c in (COLUMNA_AGUA_IZQ, COLUMNA_AGUA_DER):
+-    ax[1].axvline(c, color="g", ls="--")
+-ax[1].set_yscale("symlog", linthresh=1.0)
+-ax[1].set_title("Perfil de brillo en la fila de la seccion: agua negra, grava clara")
+-plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig2_geometria.png", dpi=110, bbox_inches="tight")
+-plt.show()
++_filas, _seccion = [], None
++for _, r in _val.iloc[11:].iterrows():
++    etiqueta = str(r[0])
++    if etiqueta.startswith("XS"):
++        _seccion = etiqueta
++    elif _seccion is not None and etiqueta.replace(".", "").isdigit():
++        _filas.append((_seccion, float(r[0]), float(r[1])))
++verticales = pd.DataFrame(_filas, columns=["seccion", "x", "y"])
++SECCIONES = list(dict.fromkeys(verticales.seccion))
++N_ESTACIONES = len(verticales)
++MAPA_RECT = None              # el video ya esta en el plano del agua
++
++
++angulos = {}
++for sec in SECCIONES:
++    p = verticales[verticales.seccion == sec][["x", "y"]].to_numpy()
++    d = p[-1] - p[0]
++    angulos[sec] = float(np.degrees(np.arctan2(-d[0], d[1])))
++verticales["angulo"] = verticales.seccion.map(angulos)
++# Progresiva de cada vertical a lo largo de su propia seccion, desde el primer punto.
++verticales["s_m"] = [np.hypot(r.x - verticales[verticales.seccion == r.seccion].x.iloc[0],
++                              r.y - verticales[verticales.seccion == r.seccion].y.iloc[0]) * ESCALA
++                     for r in verticales.itertuples()]
++print(f"Escala declarada: {ESCALA * 1000:.1f} mm/px; {len(SECCIONES)} secciones, "
++      f"{N_ESTACIONES} verticales")
++for sec in SECCIONES:
++    print(f"  {sec}: {int((verticales.seccion == sec).sum())} verticales, normal "
++          f"{angulos[sec]:+.1f} grados")
+ 
+ # ---------------------------------------------------------------------------------------
+ #  >>> AJUSTABLE <<<  Lineas de busqueda
+ # ---------------------------------------------------------------------------------------
+-# Direccion del flujo: hacia arriba en la imagen (la correlacion de fase entre fotogramas
+-# consecutivos da desviaciones de la vertical de -0.6 a -3.9 grados en la parte activa).
+-ANGULO_FLUJO = -90.0          # grados
+-# Orden de magnitud de la velocidad superficial: de aqui sale el paso de muestreo.
+-V_ESPERADA = 0.9              # m/s
+-
+-# paralelas: 24 px de ancho, una linea cada 4 px.
+-LARGO_LINEA = 128 * 4 * ESCALA   # m
+-ANCHO_BANDA, PASO_BANDA = 24, 4  # px
+-# ---------------------------------------------------------------------------------------
+-
+-
+-centros = np.column_stack([columnas_estaciones, np.full(N_ESTACIONES, FILA_SECCION)])
++# Orden de magnitud de la velocidad superficial: el centro del rango que da la correlacion de
++# parches entre fotogramas consecutivos del video sembrado (4.0 a 6.4 px/fotograma). Para el
++# video sin sembrar no se puede medir (no hay con que): se usa el mismo, como todo lo demas.
++V_ESPERADA = 0.45             # m/s
++
++# Banda estrecha: las verticales de una seccion estan a ~25 px.
++LARGO_LINEA = 48 * 5 * ESCALA    # m
++ANCHO_BANDA, PASO_BANDA = 6, 3   # px
++# ---------------------------------------------------------------------------------------
++
++centros = verticales[["x", "y"]].to_numpy()
+ D_ESPERADO = V_ESPERADA * DT / ESCALA        # px por fotograma
+ DS = int(round(D_ESPERADO))                  # paso de muestreo: estelas a ~45 grados
+@@ -161,25 +178,39 @@
+ 
+ 
+-def mapa_banda(centros, angulo_deg, ds, largo, ancho, paso):
+-    """Una banda de lineas paralelas por estacion: (n_est * n_banda, n_muestras)."""
+-    a = np.radians(angulo_deg)
+-    perp = np.array([-np.sin(a), np.cos(a)])          # a traves de la linea
++def mapa_banda(centros, angulos_deg, ds, largo, ancho, paso):
++    """Una banda de lineas paralelas por estacion: (n_est * n_banda, n_muestras).
++
++    Un angulo por estacion (o uno para todas).
++    """
++    c = np.asarray(centros, float)
++    a = np.radians(np.broadcast_to(np.asarray(angulos_deg, float), (len(c),)))
++    perp = np.column_stack([-np.sin(a), np.cos(a)])   # a traves de la linea, por estacion
+     offsets = np.arange(-ancho / 2, ancho / 2 + 1e-9, paso)
+-    c = np.asarray(centros, float)
+-    todos = (c[:, None, :] + offsets[None, :, None] * perp).reshape(-1, 2)
+-    return (*mapa_lineas(todos, angulo_deg, ds, largo), len(offsets))
+-
+-
+-mapx, mapy, N_BANDA = mapa_banda(centros, ANGULO_FLUJO, DS, LARGO_LINEA / ESCALA,
++    todos = (c[:, None, :] + offsets[None, :, None] * perp[:, None, :]).reshape(-1, 2)
++    angs = np.repeat(np.degrees(a), len(offsets))
++    return (*mapa_lineas(todos, angs, ds, largo), len(offsets))
++
++
++mapx, mapy, N_BANDA = mapa_banda(centros, verticales.angulo.to_numpy(), DS, LARGO_LINEA / ESCALA,
+                                  ANCHO_BANDA, PASO_BANDA)
++
++dentro = ((mapx >= MARGEN_BORDE) & (mapx < ANCHO_PX - MARGEN_BORDE)
++          & (mapy >= MARGEN_BORDE) & (mapy < ALTO_PX - MARGEN_BORDE))
++VALIDO = dentro.reshape(N_ESTACIONES, N_BANDA, -1).all(axis=1)
++verticales["cobertura"] = VALIDO.mean(axis=1)
+ print(f"{N_ESTACIONES} estaciones x {N_BANDA} lineas de {mapx.shape[1]} muestras "
+       f"({mapx.shape[1] * DS * ESCALA:.2f} m cada una)")
+-
+-plt.figure(figsize=(10, 6))
+-plt.imshow(frame_realce, cmap="gray")
+-for i in range(mapx.shape[0]):
+-    plt.plot(mapx[i], mapy[i], "r-", lw=0.4)
+-plt.title(f"Las bandas de {N_BANDA} lineas de las {N_ESTACIONES} estaciones")
+-plt.savefig(DIR_SALIDA / "fig3_lineas_busqueda.png", dpi=110, bbox_inches="tight")
++print("Cobertura por seccion:", verticales.groupby("seccion").cobertura.min().round(2).to_dict())
++
++plt.figure(figsize=(8, 8))
++plt.imshow(pilas["sembrado"][0], cmap="gray")
++for i in range(N_ESTACIONES):
++    lin = slice(i * N_BANDA, (i + 1) * N_BANDA)
++    plt.plot(mapx[lin][N_BANDA // 2], mapy[lin][N_BANDA // 2],
++             "c-" if verticales.cobertura[i] >= 0.5 else "r-", lw=0.7)
++plt.plot(verticales.x, verticales.y, "w.", ms=4)
++plt.xlim(0, ANCHO_PX); plt.ylim(ALTO_PX, 0)
++plt.title("Lineas de busqueda giradas a la normal de cada seccion (sobre el video sembrado)")
++plt.savefig(DIR_SALIDA / "fig2_lineas_busqueda.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+@@ -187,9 +218,8 @@
+ #  >>> AJUSTABLE <<<  Cuanto video se procesa y parametros del estimador
+ # ---------------------------------------------------------------------------------------
+-
+-# mas particulas por linea, y el coste de memoria de STIV no crece con la duracion.
++# El video entero (los dos tienen menos de 600 fotogramas).
+ N_FRAMES = 600
+ 
+-LADO_BLOQUE = 64
++LADO_BLOQUE = 24
+ # Coherencia minima para que un bloque entre en la mediana ponderada.
+ COH_MIN_BLOQUE = 0.50
+@@ -251,6 +281,10 @@
+ 
+ 
+-def medir_sti(sti_p, lado=LADO_BLOQUE, coh_min=COH_MIN_BLOQUE, sigma=SIGMA_DERIVADA):
+-    """Pendiente robusta de una STI, por bloques con solape: (m, coherencia mediana)."""
++def medir_sti(sti_p, lado=LADO_BLOQUE, coh_min=COH_MIN_BLOQUE, sigma=SIGMA_DERIVADA, valido=None):
++    """Pendiente robusta de una STI, por bloques con solape: (m, coherencia mediana).
++
++    `valido` (una por muestra) marca las muestras dentro del fotograma; los bloques que
++    tocan alguna de fuera no cuentan.
++    """
+     nt, nx = sti_p.shape
+     paso = lado // 2
+@@ -258,4 +292,6 @@
+     for t0 in range(0, nt - lado + 1, paso):
+         for x0 in range(0, nx - lado + 1, paso):
++            if valido is not None and not valido[x0:x0 + lado].all():
++                continue
+             m, c = tensor_estructura(sti_p[t0:t0 + lado, x0:x0 + lado], sigma)
+             if np.isfinite(m):
+@@ -276,53 +312,44 @@
+ 
+ 
+-# Unica pasada sobre el video: el bloque caro del notebook.
+-with benchmark.medir("Parte 4: construir las STI", n_frames=N_FRAMES):
+-    sti_crudo = construir_sti(ARCHIVO_VIDEO, mapx, mapy, N_FRAMES, SIGMA_ANTIALIAS,
+-                              MAPA_RECT)
+-
+-sti_crudo = sti_crudo.reshape(N_ESTACIONES, N_BANDA, *sti_crudo.shape[1:])
+-np.save(DIR_SALIDA / "sti_crudo.npy", sti_crudo)
+-# Contraste temporal y brillo medio de cada estacion, antes de normalizar.
+-CONTRASTE = np.median(sti_crudo.std(axis=2), axis=2).mean(axis=1)
+-BRILLO = sti_crudo.mean(axis=(1, 2, 3))
+-
+-with benchmark.medir("Parte 4: preparar STI + tensor de estructura"):
+-
++def medir_video(archivo):
++    """Lo que en la v6 era el cuerpo de esta celda, para un video cualquiera."""
++    sti_crudo = construir_sti(archivo, mapx, mapy, N_FRAMES, SIGMA_ANTIALIAS, MAPA_RECT)
++    # (estacion, linea de la banda, tiempo, muestra)
++    sti_crudo = sti_crudo.reshape(N_ESTACIONES, N_BANDA, *sti_crudo.shape[1:])
++    # Contraste temporal y brillo medio de cada estacion, antes de normalizar.
++    contraste = np.median(sti_crudo.std(axis=2), axis=2).mean(axis=1)
++    brillo = sti_crudo.mean(axis=(1, 2, 3))
++    # Cada linea de la banda se normaliza por separado y luego se promedian.
+     sti_prep = np.stack([np.mean([preparar_sti(l) for l in banda], axis=0) for banda in sti_crudo])
+     v_stiv = np.full(N_ESTACIONES, np.nan)
+     coherencia = np.full(N_ESTACIONES, np.nan)
+     for i in range(N_ESTACIONES):
+-        m, coherencia[i] = medir_sti(sti_prep[i])
+-        v_stiv[i] = m * DS * ESCALA / DT if np.isfinite(m) else np.nan
+-
+-print(f"STI: {N_ESTACIONES} estaciones x {N_BANDA} lineas x {sti_crudo.shape[2]} fotogramas x "
+-      f"{sti_crudo.shape[3]} muestras")
+-print(pd.DataFrame({"estacion": np.arange(N_ESTACIONES), "columna": columnas_estaciones,
+-                    "s_m": s_estaciones, "brillo": BRILLO, "contraste": CONTRASTE,
+-                    "coherencia": coherencia, "v_ms": v_stiv})
+-      .to_string(index=False, float_format=lambda x: f"{x:8.4f}"))
+-
+-
+-# y con la banda entera, con todo lo demas igual.
+-una_linea = [medir_sti(preparar_sti(banda[N_BANDA // 2]))[1] for banda in sti_crudo]
+-print("Coherencia mediana por estacion:")
+-print(pd.DataFrame({"estacion": np.arange(N_ESTACIONES), "una linea": una_linea,
+-                    f"banda de {N_BANDA}": coherencia})
+-      .to_string(index=False, float_format=lambda x: f"{x:6.3f}"))
+-print(f"\nEstaciones por encima de 0.70: una linea {int((np.array(una_linea) >= 0.70).sum())}, "
+-      f"banda {int((coherencia >= 0.70).sum())}")
+-
+-fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+-i_demo = 3
+-axes[0].imshow(sti_crudo[i_demo, N_BANDA // 2, :200], cmap="gray", aspect="auto")
+-axes[0].set_title(f"STI cruda, una linea (estacion {i_demo})")
+-axes[1].imshow(preparar_sti(sti_crudo[i_demo, N_BANDA // 2])[:200], cmap="gray", aspect="auto")
+-axes[1].set_title("La misma, preparada")
+-axes[2].imshow(sti_prep[i_demo][:200], cmap="gray", aspect="auto")
+-axes[2].set_title(f"Preparada y promediada sobre la banda ({N_BANDA} lineas)")
+-for ax in axes:
+-    ax.set_xlabel("espacio (muestras)"); ax.set_ylabel("tiempo (fotogramas)")
++        m, coherencia[i] = medir_sti(sti_prep[i], valido=VALIDO[i])
++
++        v_stiv[i] = abs(m) * DS * ESCALA / DT if np.isfinite(m) else np.nan
++    return dict(sti_prep=sti_prep, contraste=contraste, brillo=brillo, v_stiv=v_stiv,
++                coherencia=coherencia, n_frames=sti_crudo.shape[2])
++
++
++resultados = {}
++for etq, ruta in VIDEOS.items():
++    with benchmark.medir(f"Parte 4: STI y tensor [{etq}]", n_frames=len(pilas[etq])):
++        resultados[etq] = medir_video(ruta)
++    r = resultados[etq]
++    print(f"[{etq:11s}] {r['n_frames']} fotogramas: coherencia mediana "
++          f"{np.median(r['coherencia']):.3f}, maxima {r['coherencia'].max():.3f}; contraste "
++          f"temporal mediano {np.median(r['contraste']):.2f}")
++
++
++DEMO = [12, 20, 30, 40]
++fig, axes = plt.subplots(2, len(DEMO), figsize=(15, 8))
++for fila, etq in enumerate(VIDEOS):
++    for col, i in enumerate(DEMO):
++        axes[fila, col].imshow(resultados[etq]["sti_prep"][i], cmap="gray", aspect="auto")
++        axes[fila, col].set_title(f"{verticales.seccion[i]} v{i} - {etq}", fontsize=9)
++        axes[fila, col].set_xticks([]); axes[fila, col].set_yticks([])
++fig.suptitle("Arriba sin sembrar: ruido. Abajo sembrado: estelas rectas. Mismo proceso.")
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig4_banda.png", dpi=110, bbox_inches="tight")
++plt.savefig(DIR_SALIDA / "fig3_sti_comparadas.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ 
+@@ -330,73 +357,122 @@
+ #  >>> AJUSTABLE <<<  Criterios de aceptacion
+ # ---------------------------------------------------------------------------------------
+-# Coherencia mediana minima para dar por buena una estacion. La misma de la v3 a la v5.
++# Coherencia mediana minima para dar por buena una estacion. La misma de la v3 a la v6.
+ COH_MIN_ESTACION = 0.70
+-
++# Desactivado desde la v6.
+ CONTRASTE_MIN = 0.0
+ 
+-BRILLO_MAX_AGUA = 5.0
+-# ---------------------------------------------------------------------------------------
+-
++BRILLO_MAX_AGUA = 255.0
++
++COBERTURA_MIN = 0.50
++# ---------------------------------------------------------------------------------------
++
++medida, v_eff = {}, {}
+ with benchmark.medir("Parte 4b: control de calidad"):
+-    es_estatica = CONTRASTE < CONTRASTE_MIN
+-    es_orilla = BRILLO > BRILLO_MAX_AGUA
+-    medida = (~es_estatica) & (~es_orilla) & (coherencia >= COH_MIN_ESTACION) & np.isfinite(v_stiv)
+-    v_eff = np.where(medida, v_stiv, np.nan)
+-
+-print(f"Estaciones medidas: {int(medida.sum())} de {N_ESTACIONES}")
+-for i in np.where(~medida)[0]:
+-    motivo = (f"brillo {BRILLO[i]:.2f} > {BRILLO_MAX_AGUA}: la banda pisa la orilla" if es_orilla[i]
+-              else f"coherencia {coherencia[i]:.2f} < {COH_MIN_ESTACION}")
+-    print(f"  estacion {i} (columna {columnas_estaciones[i]}): RECHAZADA, {motivo}")
+-print(f"\nContraste temporal del agua medida: {np.round(CONTRASTE[medida], 2)}; de la orilla: "
+-      f"{np.round(CONTRASTE[es_orilla], 2)}  <- por eso aqui no sirve")
+-
+-with benchmark.medir("Parte 5: perfil transversal"):
+-    v_mediana = float(np.nanmedian(v_eff))
+-    v_q05, v_q95 = np.nanquantile(v_eff, [0.05, 0.95])
+-
+-print("=" * 52)
+-print(f"Velocidad superficial mediana: {v_mediana:.4f} m/s")
+-print(f"  rango medido: {np.nanmin(v_eff):.3f} - {np.nanmax(v_eff):.3f} m/s")
+-print(f"Estaciones medidas: {int(medida.sum())} de {N_ESTACIONES} (sin relleno)")
+-print("=" * 52)
+-
+-perfil = pd.DataFrame({
+-    "estacion": np.arange(N_ESTACIONES),
+-    "columna_px": columnas_estaciones,
+-    "s_m": s_estaciones,
+-    "brillo": BRILLO,
+-    "contraste": CONTRASTE,
+-    "coherencia": coherencia,
+-    "v_medida_ms": v_eff,
+-    "estado": np.where(medida, "medida",
+-                       np.where(es_orilla, "orilla (brillo)", "coherencia baja")),
+-})
++    for etq, r in resultados.items():
++        es_estatica = r["contraste"] < CONTRASTE_MIN
++        es_orilla = r["brillo"] > BRILLO_MAX_AGUA
++        fuera = verticales.cobertura.to_numpy() < COBERTURA_MIN
++        medida[etq] = ((~es_estatica) & (~es_orilla) & (~fuera)
++                       & (r["coherencia"] >= COH_MIN_ESTACION) & np.isfinite(r["v_stiv"]))
++        v_eff[etq] = np.where(medida[etq], r["v_stiv"], np.nan)
++
++print("=" * 74)
++print(f"{'video':<14}{'aceptadas':>12}{'coh mediana':>14}{'coh maxima':>13}{'contraste mediano':>20}")
++for etq, r in resultados.items():
++    print(f"{etq:<14}{medida[etq].sum():>6}/{N_ESTACIONES:<5}{np.median(r['coherencia']):>14.3f}"
++          f"{r['coherencia'].max():>13.3f}{np.median(r['contraste']):>20.2f}")
++print("=" * 74)
++print(f"La coherencia MAXIMA del video sin sembrar ({resultados['sin sembrar']['coherencia'].max():.3f})"
++      f" no llega al umbral de {COH_MIN_ESTACION}.")
++print("El contraste temporal, aunque desactivado, separa tambien los dos videos sin solape: "
++      f"{resultados['sin sembrar']['contraste'].max():.2f} como maximo sin sembrar, "
++      f"{resultados['sembrado']['contraste'].min():.2f} como minimo sembrado.")
++
++fig, ax = plt.subplots(1, 2, figsize=(13, 4.5))
++for etq, color in zip(VIDEOS, ["tab:red", "tab:blue"]):
++    ax[0].hist(resultados[etq]["coherencia"], bins=np.linspace(0, 1, 26), alpha=0.65, color=color, label=etq)
++    ax[1].plot(resultados[etq]["contraste"], resultados[etq]["coherencia"], "o", color=color, label=etq)
++ax[0].axvline(COH_MIN_ESTACION, color="k", ls="--"); ax[0].set_xlabel("coherencia"); ax[0].legend()
++ax[1].axhline(COH_MIN_ESTACION, color="k", ls="--"); ax[1].set_xlabel("contraste temporal")
++ax[1].set_ylabel("coherencia"); ax[1].legend()
++plt.tight_layout()
++plt.savefig(DIR_SALIDA / "fig4_control_calidad.png", dpi=110, bbox_inches="tight")
++plt.show()
++
++
++def curva_decorrelacion(pila, saltos, parches, radio=28):
++    """Pico de correlacion ensemble frente al salto temporal."""
++    nrm = (pila - pila.mean(axis=0)) / (pila.std(axis=0) + 1e-6)
++    curva = []
++    for dt in saltos:
++        busq = min(10 + 7 * dt, 60)
++        picos = []
++        for (x0, y0) in parches:
++            acc = None
++            for k in range(len(nrm) - dt):
++                A = nrm[k, y0:y0 + 2 * radio, x0:x0 + 2 * radio]
++                B = nrm[k + dt, max(y0 - busq, 0):y0 + 2 * radio + busq,
++                        max(x0 - busq, 0):x0 + 2 * radio + busq]
++                r = cv2.matchTemplate(B, A, cv2.TM_CCOEFF_NORMED)
++                acc = r if acc is None else acc + r
++            picos.append(float((acc / (len(nrm) - dt)).max()))
++        curva.append(float(np.mean(picos)))
++    return np.array(curva)
++
++
++SALTOS = [1, 2, 3, 4, 6, 8]
++PARCHES = [(150, 150), (250, 200), (200, 250)]     # parches de agua, lejos de las orillas
++with benchmark.medir("Parte 4c: curvas de decorrelacion"):
++    decorr = {etq: curva_decorrelacion(pilas[etq], SALTOS, PARCHES) for etq in VIDEOS}
++tabla_decorr = pd.DataFrame({"salto_s": np.array(SALTOS) * DT,
++                             **{etq: np.round(decorr[etq], 3) for etq in VIDEOS}})
++tabla_decorr.to_csv(DIR_SALIDA / "decorrelacion.csv", index=False)
++print(tabla_decorr.to_string(index=False))
++
++plt.figure(figsize=(8, 4.5))
++for etq, color in zip(VIDEOS, ["tab:red", "tab:blue"]):
++    plt.plot(np.array(SALTOS) * DT, decorr[etq], "o-", color=color, label=etq)
++plt.axhline(0.1, color="gray", ls=":")
++plt.xlabel("salto temporal (s)"); plt.ylabel("pico de correlacion ensemble")
++plt.title("Cuanto dura el dibujo de la superficie"); plt.ylim(0, 0.8); plt.legend(); plt.grid(alpha=0.3)
++plt.savefig(DIR_SALIDA / "fig5_decorrelacion.png", dpi=110, bbox_inches="tight")
++plt.show()
++
++with benchmark.medir("Parte 5: perfiles transversales"):
++    v_mediana = {etq: float(np.nanmedian(v)) if np.isfinite(v).any() else np.nan
++                 for etq, v in v_eff.items()}
++for etq in VIDEOS:
++    print(f"[{etq:11s}] {int(medida[etq].sum()):2d} estaciones, mediana {v_mediana[etq]:.4f} m/s")
++
++perfil = verticales.copy()
++for etq in VIDEOS:
++    suf = etq.replace(" ", "_")
++    perfil[f"coherencia_{suf}"] = resultados[etq]["coherencia"]
++    perfil[f"contraste_{suf}"] = resultados[etq]["contraste"]
++    perfil[f"v_{suf}"] = v_eff[etq]
+ perfil.to_csv(SALIDA_PERFIL, index=False)
+ 
+ import json
+-config = dict(video=ARCHIVO_VIDEO.name, n_frames=int(sti_crudo.shape[2]), fps=FPS,
+-              escala_m_px=ESCALA, fila_seccion=FILA_SECCION,
+-              columnas_estaciones=columnas_estaciones.tolist(), angulo_flujo=ANGULO_FLUJO,
+-              v_esperada=V_ESPERADA, ds_px=DS, sigma_antialias=SIGMA_ANTIALIAS,
+-              largo_linea_m=LARGO_LINEA, ancho_banda_px=ANCHO_BANDA, paso_banda_px=PASO_BANDA,
+-              lado_bloque=LADO_BLOQUE, coh_min_bloque=COH_MIN_BLOQUE,
+-              sigma_derivada=SIGMA_DERIVADA, coh_min_estacion=COH_MIN_ESTACION,
+-              contraste_min=CONTRASTE_MIN, brillo_max_agua=BRILLO_MAX_AGUA,
+-              v_mediana_ms=v_mediana)
++config = dict(videos={k: v.name for k, v in VIDEOS.items()}, fps=FPS, escala_m_px=ESCALA,
++              angulos_seccion=angulos, v_esperada=V_ESPERADA, ds_px=DS,
++              sigma_antialias=SIGMA_ANTIALIAS, largo_linea_m=LARGO_LINEA,
++              ancho_banda_px=ANCHO_BANDA, paso_banda_px=PASO_BANDA, lado_bloque=LADO_BLOQUE,
++              coh_min_bloque=COH_MIN_BLOQUE, sigma_derivada=SIGMA_DERIVADA,
++              coh_min_estacion=COH_MIN_ESTACION, contraste_min=CONTRASTE_MIN,
++              brillo_max_agua=BRILLO_MAX_AGUA, cobertura_min=COBERTURA_MIN,
++              aceptadas={k: int(v.sum()) for k, v in medida.items()})
+ SALIDA_CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
+ 
+-fig, ax = plt.subplots(figsize=(11, 5))
+-ax.plot(s_estaciones[medida], v_eff[medida], "b-o", ms=8, label="medida")
+-ax.plot(s_estaciones[~medida], np.abs(v_stiv[~medida]), "x", color="darkred", ms=11, mew=2,
+-        label="rechazada (no se rellena)")
+-ax.set_xlabel("distancia desde la orilla izquierda (m)")
+-ax.set_ylabel("velocidad superficial (m/s)")
+-ax.set_title("Perfil transversal de velocidad superficial")
+-ax.grid(alpha=0.3); ax.legend()
++fig, axes = plt.subplots(1, len(SECCIONES), figsize=(17, 4), sharey=True)
++for ax, sec in zip(axes, SECCIONES):
++    sel = (verticales.seccion == sec).to_numpy()
++    for etq, color, marca in zip(VIDEOS, ["tab:red", "tab:blue"], ["x", "o"]):
++        ax.plot(verticales.s_m[sel], v_eff[etq][sel], marca + "-", color=color,
++                label=f"{etq} ({int(medida[etq][sel].sum())} validas)")
++    ax.set_title(sec); ax.set_xlabel("progresiva (m)"); ax.grid(alpha=0.3); ax.legend(fontsize=7)
++axes[0].set_ylabel("velocidad superficial (m/s)")
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig5_perfil.png", dpi=110, bbox_inches="tight")
+-plt.show()
+-perfil
++plt.savefig(DIR_SALIDA / "fig6_perfiles.png", dpi=110, bbox_inches="tight")
++plt.show()
+ 
+ print("Maquina donde se han medido los tiempos:")
+@@ -418,5 +494,5 @@
+     ax.text(seg, y, f"  {seg:.1f} s ({pct:.0f} %)", va="center", fontsize=8)
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig6_recursos.png", dpi=110, bbox_inches="tight")
++plt.savefig(DIR_SALIDA / "fig7_recursos.png", dpi=110, bbox_inches="tight")
+ plt.show()
+ tabla_recursos
+@@ -426,48 +502,101 @@
+ #  Datos de validacion. Primera y unica vez que aparecen. (obtenido del dataset)
+ # ---------------------------------------------------------------------------------------
+-V_REFERENCIA = _fil[3].astype(float).to_numpy()   # m/s, una por vertical Vert1..Vert7
+-# ---------------------------------------------------------------------------------------
+-
+-indice = {c: i for i, c in enumerate(columnas_estaciones)}
+-comparacion = pd.DataFrame([
+-    dict(vertical=f"Vert{k + 1}", estacion=indice[c], s_m=s_estaciones[indice[c]],
+-         v_stiv=v_eff[indice[c]], v_ref=vref, estado=perfil.estado[indice[c]])
+-    for k, (c, vref) in enumerate(zip(COLUMNAS_VALIDACION, V_REFERENCIA))])
+-comparacion["dif_pct"] = 100 * (comparacion.v_stiv / comparacion.v_ref - 1)
+-print(comparacion.to_string(index=False, float_format=lambda x: f"{x:8.3f}"))
+-
+-emp = comparacion.dropna(subset=["v_stiv"])
+-sesgo = float((emp.v_stiv - emp.v_ref).mean())
+-rmse = float(np.sqrt(((emp.v_stiv - emp.v_ref) ** 2).mean()))
+-r = float(np.corrcoef(emp.v_stiv, emp.v_ref)[0, 1])
+-print("\n" + "=" * 66)
+-print(f"Sobre las {len(emp)} verticales que STIV midio (de {len(comparacion)} publicadas):")
+-print(f"  Sesgo medio : {sesgo:+.4f} m/s ({100 * sesgo / emp.v_ref.mean():+.1f} %)")
+-print(f"  RMSE        : {rmse:.4f} m/s")
+-print(f"  Correlacion : {r:+.3f}")
+-print("=" * 66)
+-
+-fig, ax = plt.subplots(1, 2, figsize=(15, 5.5))
+-ax[0].plot(comparacion.s_m, comparacion.v_ref, "ks--", ms=8, label="referencia del dataset")
+-ax[0].plot(emp.s_m, emp.v_stiv, "r-o", ms=8, label="STIV (este notebook)")
+-ax[0].set_xlabel("distancia desde la orilla izquierda (m)"); ax[0].set_ylabel("velocidad (m/s)")
+-ax[0].set_title("Perfil transversal frente a la referencia"); ax[0].grid(alpha=0.3); ax[0].legend()
+-lim = [0.3, 1.6]
+-ax[1].plot(emp.v_ref, emp.v_stiv, "o", ms=10)
+-ax[1].plot(lim, lim, "k--", lw=1)
+-ax[1].plot(lim, [1.1 * x for x in lim], ":", color="gray"); ax[1].plot(lim, [0.9 * x for x in lim], ":", color="gray")
+-ax[1].set_xlim(lim); ax[1].set_ylim(lim)
+-ax[1].set_xlabel("referencia (m/s)"); ax[1].set_ylabel("STIV (m/s)")
+-ax[1].set_title(f"Vertical a vertical (r = {r:+.3f})"); ax[1].grid(alpha=0.3)
++_vel, _sec = [], None
++for _, r in _val.iloc[11:].iterrows():
++    etiqueta = str(r[0])
++    if etiqueta.startswith("XS"):
++        _sec = etiqueta
++    elif _sec is not None and etiqueta.replace(".", "").isdigit():
++        _vel.append(float(r[2]))
++V_REFERENCIA = np.array(_vel)
++# ---------------------------------------------------------------------------------------
++
++for etq in VIDEOS:
++    ok = np.isfinite(v_eff[etq])
++    if not ok.any():
++        print(f"[{etq}] 0 estaciones de {N_ESTACIONES}: la referencia existe (media "
++              f"{V_REFERENCIA.mean():.3f} m/s), habia agua corriendo; falta textura en la imagen.")
++        continue
++    d = v_eff[etq][ok] - V_REFERENCIA[ok]
++    print(f"[{etq}] {ok.sum()} estaciones: media STIV {v_eff[etq][ok].mean():.4f} m/s, referencia "
++          f"{V_REFERENCIA[ok].mean():.4f} m/s; sesgo {100 * d.mean() / V_REFERENCIA[ok].mean():+.1f} %, "
++          f"RMSE {np.sqrt((d ** 2).mean()):.4f} m/s, r = {np.corrcoef(v_eff[etq][ok], V_REFERENCIA[ok])[0, 1]:+.3f}")
++
++
++# pares de fotogramas consecutivos antes de buscar el pico. Arbitro independiente de STIV.
++RADIO_PARCHE, RADIO_BUSQUEDA, PASO_REJILLA = 20, 14, 20     # px
++
++
++def piv_ensemble(pila, radio, busqueda, paso):
++    """Campo de desplazamiento por correlacion ensemble. Devuelve X, Y, U, V, C."""
++    nrm = (pila - pila.mean(axis=0)) / (pila.std(axis=0) + 1e-6)
++    xs = np.arange(radio + busqueda, pila.shape[2] - radio - busqueda, paso)
++    ys = np.arange(radio + busqueda, pila.shape[1] - radio - busqueda, paso)
++    U = np.full((len(ys), len(xs)), np.nan)
++    V, Cc = U.copy(), U.copy()
++    for jj, y0 in enumerate(ys):
++        for ii, x0 in enumerate(xs):
++            acc = None
++            for k in range(len(nrm) - 1):
++                A = nrm[k, y0 - radio:y0 + radio, x0 - radio:x0 + radio]
++                B = nrm[k + 1, y0 - radio - busqueda:y0 + radio + busqueda,
++                        x0 - radio - busqueda:x0 + radio + busqueda]
++                r = cv2.matchTemplate(B, A, cv2.TM_CCOEFF_NORMED)
++                acc = r if acc is None else acc + r
++            acc /= (len(nrm) - 1)
++            j, i = np.unravel_index(acc.argmax(), acc.shape)
++            U[jj, ii], V[jj, ii], Cc[jj, ii] = i - busqueda, j - busqueda, acc.max()
++    X, Y = np.meshgrid(xs, ys)
++    return X, Y, U, V, Cc
++
++
++from scipy.interpolate import griddata
++
++with benchmark.medir("Parte 7: PIV ensemble (arbitro)", n_frames=len(pilas["sembrado"])):
++    Xg, Yg, Ug, Vg, Cg = piv_ensemble(pilas["sembrado"], RADIO_PARCHE, RADIO_BUSQUEDA, PASO_REJILLA)
++vel_piv = np.where(Cg > 0.25, np.hypot(Ug, Vg) * ESCALA / DT, np.nan)
++fin = np.isfinite(vel_piv.ravel())
++v_piv = griddata(np.column_stack([Xg.ravel(), Yg.ravel()])[fin], vel_piv.ravel()[fin],
++                 verticales[["x", "y"]].to_numpy(), method="linear")
++
++v_sem = v_eff["sembrado"]
++def estad(a, b):
++    ok = np.isfinite(a) & np.isfinite(b)
++    return ok.sum(), np.corrcoef(a[ok], b[ok])[0, 1], np.sqrt(((a[ok] - b[ok]) ** 2).mean())
++print("=" * 70)
++for nombre, a, b in [("STIV frente a la referencia", v_sem, V_REFERENCIA),
++                     ("PIV  frente a la referencia", v_piv, V_REFERENCIA),
++                     ("STIV frente al PIV", v_sem, v_piv)]:
++    n_, r_, e_ = estad(a, b)
++    print(f"  {nombre:28s} ({n_:2d} puntos): r = {r_:+.3f}, RMSE = {e_:.4f} m/s")
++print("=" * 70)
++
++comparacion = verticales[["seccion", "x", "y", "s_m"]].copy()
++comparacion["v_ref"] = V_REFERENCIA
++comparacion["v_stiv_sembrado"] = v_sem
++comparacion["v_piv_sembrado"] = v_piv
++comparacion.to_csv(DIR_SALIDA / "comparacion_referencia.csv", index=False)
++
++fig, ax = plt.subplots(1, 2, figsize=(14, 5.5))
++lim = [0.0, 0.8]
++ax[0].plot(V_REFERENCIA, v_sem, "o", label="STIV"); ax[0].plot(V_REFERENCIA, v_piv, "^", label="PIV ensemble")
++ax[0].plot(lim, lim, "k--", lw=1); ax[0].set_xlim(lim); ax[0].set_ylim(lim)
++ax[0].set_xlabel("referencia (m/s)"); ax[0].set_ylabel("tecnica de imagen (m/s)"); ax[0].legend()
++ax[0].set_title("Las dos tecnicas contra la referencia")
++ax[1].plot(v_piv, v_sem, "o", color="tab:purple"); ax[1].plot(lim, lim, "k--", lw=1)
++ax[1].set_xlim(lim); ax[1].set_ylim(lim); ax[1].set_xlabel("PIV ensemble (m/s)"); ax[1].set_ylabel("STIV (m/s)")
++ax[1].set_title("STIV contra PIV")
+ plt.tight_layout()
+-plt.savefig(DIR_SALIDA / "fig7_comparacion.png", dpi=110, bbox_inches="tight")
+-plt.show()
+-
++plt.savefig(DIR_SALIDA / "fig8_arbitro_independiente.png", dpi=110, bbox_inches="tight")
++plt.show()
++
++n_s, r_s, e_s = estad(v_sem, V_REFERENCIA)
+ resumen = pd.DataFrame([
+-    dict(concepto="Velocidad superficial mediana (STIV)", valor=v_mediana, unidad="m/s"),
+-    dict(concepto="Verticales de validacion medidas", valor=len(emp), unidad="de 7"),
+-    dict(concepto="Sesgo medio relativo", valor=100 * sesgo / emp.v_ref.mean(), unidad="%"),
+-    dict(concepto="RMSE", valor=rmse, unidad="m/s"),
+-    dict(concepto="Correlacion r", valor=r, unidad="-"),
++    dict(concepto="Estaciones aceptadas, SIN SEMBRAR", valor=int(medida["sin sembrar"].sum()), unidad=f"de {N_ESTACIONES}"),
++    dict(concepto="Estaciones aceptadas, SEMBRADO", valor=int(medida["sembrado"].sum()), unidad=f"de {N_ESTACIONES}"),
++    dict(concepto="Coherencia maxima, sin sembrar", valor=float(resultados["sin sembrar"]["coherencia"].max()), unidad=f"umbral {COH_MIN_ESTACION}"),
++    dict(concepto="Velocidad mediana STIV, sembrado", valor=v_mediana["sembrado"], unidad="m/s"),
++    dict(concepto="Correlacion STIV vs referencia", valor=r_s, unidad="-"),
++    dict(concepto="Correlacion STIV vs PIV", valor=estad(v_sem, v_piv)[1], unidad="-"),
+     dict(concepto="Caudal", valor=np.nan, unidad="no calculable: el dataset no da batimetria"),
+ ])

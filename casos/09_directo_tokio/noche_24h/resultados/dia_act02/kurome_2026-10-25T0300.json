@@ -1,0 +1,140 @@
+{
+ "variante": "dia_act02",
+ "camara": "kurome",
+ "tramo": "2026-10-25T03:00",
+ "inicio_jst": "2026-10-25T02:59:56+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 54,
+ "mediana": 0.4845187789524046,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 108,
+    "sin_textura": 1,
+    "ambiguo": 12
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 109,
+    "ambiguo": 12
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 109,
+    "ambiguo": 3,
+    "v_max": 9
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 109,
+    "ambiguo": 12
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 1,
+   "v": 1.0993648812471426,
+   "q25": 1.0993648812471426,
+   "q75": 1.0993648812471426,
+   "coh": 0.413059419349986,
+   "escalas": "r",
+   "motivos": {
+    "coherencia": 109,
+    "ambiguo": 11
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 97,
+    "ambiguo": 24
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 15,
+   "v": 0.4533625879017476,
+   "q25": 0.4452684988219102,
+   "q75": 0.4589095902494975,
+   "coh": 0.40893332490118467,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 106
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 38,
+   "v": 0.48802906570387566,
+   "q25": 0.48267908275389465,
+   "q75": 0.4972613059496641,
+   "coh": 0.43355215532392355,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 83
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  }
+ ],
+ "segundos_proceso": 249
+}

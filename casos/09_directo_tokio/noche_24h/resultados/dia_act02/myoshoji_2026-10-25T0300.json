@@ -1,0 +1,138 @@
+{
+ "variante": "dia_act02",
+ "camara": "myoshoji",
+ "tramo": "2026-10-25T03:00",
+ "inicio_jst": "2026-10-25T02:59:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 46,
+ "mediana": 0.05094899115828373,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 3,
+   "v": 0.07683730420130985,
+   "q25": 0.07176710243122825,
+   "q75": 0.08334826627754308,
+   "coh": 0.4056880913933115,
+   "escalas": "l",
+   "motivos": {
+    "coherencia": 88,
+    "ambiguo": 30
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 104,
+    "ambiguo": 17
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 33,
+   "v": 0.04994967169270225,
+   "q25": 0.04856411458138565,
+   "q75": 0.05148302738982979,
+   "coh": 0.42835012391898325,
+   "escalas": "m",
+   "motivos": {
+    "ambiguo": 31,
+    "coherencia": 57
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 113,
+    "ambiguo": 8
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 2,
+   "v": 0.370527839714859,
+   "q25": 0.2345474408386684,
+   "q75": 0.5065082385910495,
+   "coh": 0.5153987043479986,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 113,
+    "ambiguo": 6
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 8,
+   "v": 0.056527091188129444,
+   "q25": 0.05172720713747851,
+   "q75": 0.066614684852232,
+   "coh": 0.4401259914203206,
+   "escalas": "m",
+   "motivos": {
+    "ambiguo": 113
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 103,
+    "sin_textura": 18
+   }
+  }
+ ],
+ "segundos_proceso": 277
+}

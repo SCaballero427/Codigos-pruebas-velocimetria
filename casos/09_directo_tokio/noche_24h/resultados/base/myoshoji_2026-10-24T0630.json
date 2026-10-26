@@ -1,0 +1,135 @@
+{
+ "variante": "base",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T06:30",
+ "inicio_jst": "2026-10-24T06:29:58+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 549,
+ "mediana": 0.4040315404870372,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 13,
+   "v": 0.34252936191958755,
+   "q25": 0.29552763394416776,
+   "q75": 0.3531378692733538,
+   "coh": 0.4313626999949262,
+   "escalas": "r motas 5",
+   "motivos": {
+    "coherencia": 85,
+    "ambiguo": 23
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 120,
+    "ambiguo": 1
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 9,
+    "ambiguo": 112
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 92,
+   "v": 0.5684614140993505,
+   "q25": 0.5444609352343504,
+   "q75": 0.5908304095901774,
+   "coh": 0.49710080261401485,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 29
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 98,
+   "v": 0.4220351804606147,
+   "q25": 0.38459771374244994,
+   "q75": 0.45391805423816994,
+   "coh": 0.46716387178798835,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 23
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 118,
+   "v": 0.4627332487095328,
+   "q25": 0.45420314627000996,
+   "q75": 0.4791230222411556,
+   "coh": 0.4842192577779962,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 3
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 116,
+   "v": 0.05846404395624287,
+   "q25": 0.05325735195500669,
+   "q75": 0.06602138334806007,
+   "coh": 0.5441986140223407,
+   "escalas": "M motas 81",
+   "motivos": {
+    "ambiguo": 5
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 112,
+   "v": 0.0451341298000017,
+   "q25": 0.0424084567745258,
+   "q75": 0.04789729321683013,
+   "coh": 0.4910527830479937,
+   "escalas": "L motas 13",
+   "motivos": {
+    "sin_textura": 9
+   }
+  }
+ ],
+ "segundos_proceso": 237
+}

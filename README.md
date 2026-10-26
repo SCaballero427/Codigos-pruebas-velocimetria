@@ -47,6 +47,9 @@ medicion_caudal_por_video/
 |   |-- 08_canal_piloto_yaqui/   STIV sobre un video de movil de WhatsApp, un solo notebook
 |   `-- 09_directo_tokio/        programa en tiempo real sobre camaras en directo + Raspberry Pi
 |
+|-- evolucion_algoritmo_velocimetria/   los 9 casos como 9 versiones de un mismo codigo (v1 a v9),
+|                              cada una con los cambios respecto a la anterior; ver su README.md
+|-- codigo_stiv/               el STIV como modulo: version inicial (prueba 3) y completa (pruebas 4-8), con validar.py
 |-- herramientas/              scripts sueltos reutilizables (estabilizar, convertir, marcar puntos, ffmpeg)
 |-- tutoriales/                notebooks didacticos: STIV explicado paso a paso, primer notebook de pyorc
 |-- datos/                     videos y mediciones de entrada (solo lectura)

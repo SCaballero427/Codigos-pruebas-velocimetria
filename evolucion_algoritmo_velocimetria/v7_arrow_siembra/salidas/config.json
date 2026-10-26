@@ -1,0 +1,32 @@
+{
+  "videos": {
+    "sin sembrar": "Arrow_GoPro_Unseeded_Stabilised.avi",
+    "sembrado": "Arrow_GoPro_Seeded_Stabilised.avi"
+  },
+  "fps": 5.0,
+  "escala_m_px": 0.0174,
+  "angulos_seccion": {
+    "XS1": 8.16847862404549,
+    "XS2": 13.336838377910954,
+    "XS3": 16.042782401211756,
+    "XS4": 13.869686438505038,
+    "XS5": 12.83560948640144
+  },
+  "v_esperada": 0.45,
+  "ds_px": 5,
+  "sigma_antialias": 2.5,
+  "largo_linea_m": 4.176,
+  "ancho_banda_px": 6,
+  "paso_banda_px": 3,
+  "lado_bloque": 24,
+  "coh_min_bloque": 0.5,
+  "sigma_derivada": 1.5,
+  "coh_min_estacion": 0.7,
+  "contraste_min": 0.0,
+  "brillo_max_agua": 255.0,
+  "cobertura_min": 0.5,
+  "aceptadas": {
+    "sin sembrar": 0,
+    "sembrado": 38
+  }
+}

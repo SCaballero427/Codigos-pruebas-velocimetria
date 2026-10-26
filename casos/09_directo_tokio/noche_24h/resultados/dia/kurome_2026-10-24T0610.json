@@ -1,0 +1,124 @@
+{
+ "variante": "dia",
+ "camara": "kurome",
+ "tramo": "2026-10-24T06:10",
+ "inicio_jst": "2026-10-24T06:09:59+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 484,
+ "mediana": 0.761985472536212,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.7368222325520503,
+   "q25": 0.7170657316553816,
+   "q75": 0.755096157246155,
+   "coh": 0.49476624170569544,
+   "escalas": "r",
+   "motivos": {}
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.7498280472611901,
+   "q25": 0.7278245791484586,
+   "q75": 0.7738023483281669,
+   "coh": 0.46754696775865173,
+   "escalas": "r",
+   "motivos": {}
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.756446919279696,
+   "q25": 0.6927528058220754,
+   "q75": 0.7897715809045873,
+   "coh": 0.48398727150946697,
+   "escalas": "r",
+   "motivos": {}
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.8585121825677973,
+   "q25": 0.8360032149536312,
+   "q75": 0.871312028466202,
+   "coh": 0.5997517196060168,
+   "escalas": "r",
+   "motivos": {}
+  }
+ ],
+ "segundos_proceso": 1654
+}

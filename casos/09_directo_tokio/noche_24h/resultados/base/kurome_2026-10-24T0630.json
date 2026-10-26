@@ -1,0 +1,127 @@
+{
+ "variante": "base",
+ "camara": "kurome",
+ "tramo": "2026-10-24T06:30",
+ "inicio_jst": "2026-10-24T06:29:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 483,
+ "mediana": 0.7408091680189037,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.7114288727789763,
+   "q25": 0.7015610166856341,
+   "q75": 0.7247518695505141,
+   "coh": 0.47107283444679626,
+   "escalas": "r",
+   "motivos": {}
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 120,
+   "v": 0.7210890885266062,
+   "q25": 0.7042137734069805,
+   "q75": 0.7372907048555465,
+   "coh": 0.4436629835074797,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 1
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 108,
+    "coherencia": 13
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.7665609504479795,
+   "q25": 0.7305070964355991,
+   "q75": 0.8208170286690575,
+   "coh": 0.44759125913528525,
+   "escalas": "r",
+   "motivos": {}
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 121,
+   "v": 0.8561801458828894,
+   "q25": 0.8429262308489893,
+   "q75": 0.871506753385261,
+   "coh": 0.5470354809180074,
+   "escalas": "r",
+   "motivos": {}
+  }
+ ],
+ "segundos_proceso": 211
+}

@@ -1,0 +1,133 @@
+{
+ "variante": "dia_brillo60",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T19:00",
+ "inicio_jst": "2026-10-24T18:59:59+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 156,
+ "mediana": 0.07178049996076888,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 111,
+   "v": 0.06580440061943263,
+   "q25": 0.06231353202707676,
+   "q75": 0.07950094818312527,
+   "coh": 0.6191347311053494,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 10
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 45,
+   "v": 0.07695434543384494,
+   "q25": 0.07412395704548298,
+   "q75": 0.08449496430209498,
+   "coh": 0.6007583960068317,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 76
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 62,
+    "sin_textura": 59
+   }
+  }
+ ],
+ "segundos_proceso": 308
+}

@@ -1,0 +1,147 @@
+{
+ "variante": "dia",
+ "camara": "kurome",
+ "tramo": "2026-10-24T05:40",
+ "inicio_jst": "2026-10-24T05:39:58+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 120,
+ "aceptadas": 67,
+ "mediana": 0.888248278688313,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 120,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 3,
+    "ambiguo": 116,
+    "coherencia": 1
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 120,
+   "aceptadas": 13,
+   "v": 0.9191892243723166,
+   "q25": 0.8168533976653526,
+   "q75": 1.0323925868401904,
+   "coh": 0.5162527669371576,
+   "escalas": "r",
+   "motivos": {
+    "v_max": 49,
+    "ambiguo": 57,
+    "coherencia": 1
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 120,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 31,
+    "coherencia": 48,
+    "ambiguo": 41
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 120,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "coherencia": 75,
+    "ambiguo": 45
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 120,
+   "aceptadas": 4,
+   "v": 0.6508162899276804,
+   "q25": 0.42460660128609284,
+   "q75": 0.8644002550832917,
+   "coh": 0.5190779162760956,
+   "escalas": "r",
+   "motivos": {
+    "coherencia": 66,
+    "ambiguo": 46,
+    "v_max": 4
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 120,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 34,
+    "coherencia": 51,
+    "ambiguo": 35
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 120,
+   "aceptadas": 4,
+   "v": 0.600730958306039,
+   "q25": 0.5356741626511011,
+   "q75": 0.6371481932751402,
+   "coh": 0.4913800188894529,
+   "escalas": "r",
+   "motivos": {
+    "coherencia": 13,
+    "v_max": 20,
+    "ambiguo": 83
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 120,
+   "aceptadas": 2,
+   "v": 0.9887647165083993,
+   "q25": 0.9087663365461102,
+   "q75": 1.0687630964706882,
+   "coh": 0.4064304248964411,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 117,
+    "v_max": 1
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 120,
+   "aceptadas": 44,
+   "v": 0.9249476229856386,
+   "q25": 0.8656660833895653,
+   "q75": 0.997526987278695,
+   "coh": 0.42881373083291624,
+   "escalas": "r",
+   "motivos": {
+    "ambiguo": 73,
+    "v_max": 3
+   }
+  }
+ ],
+ "segundos_proceso": 1646
+}

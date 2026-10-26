@@ -134,7 +134,21 @@ def main():
                                        "en_video_s": round(meta["segundos"], 2)})
                 print(f"  hueco: {nuevos[0][0] - ultimo - 1} segmentos perdidos", file=sys.stderr)
             for seq, u, dur, pdt in nuevos:
-                datos = leer(u)
+                # un 503 suelto de YouTube no puede cortar una grabacion de horas: 3 intentos y, si no,
+                # el segmento cuenta como hueco y se sigue con el siguiente
+                datos = None
+                for intento in range(3):
+                    try:
+                        datos = leer(u)
+                        break
+                    except Exception as e:
+                        meta["errores"] += 1
+                        print(f"  segmento {seq}: {e}", file=sys.stderr)
+                        time.sleep(2)
+                if datos is None:
+                    meta["huecos"].append({"despues_de": ultimo, "perdidos": 1, "en_video_s": round(meta["segundos"], 2)})
+                    ultimo = seq
+                    continue
                 fts.write(datos)
                 w.writerow([seq, pdt or "", dur, datetime.now(JST).isoformat(timespec="seconds"), len(datos),
                             round(meta["segundos"], 3)])

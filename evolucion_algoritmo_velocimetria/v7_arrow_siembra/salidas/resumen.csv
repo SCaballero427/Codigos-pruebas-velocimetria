@@ -1,0 +1,8 @@
+concepto,valor,unidad
+"Estaciones aceptadas, SIN SEMBRAR",0.0,de 49
+"Estaciones aceptadas, SEMBRADO",38.0,de 49
+"Coherencia maxima, sin sembrar",0.5589605469565672,umbral 0.7
+"Velocidad mediana STIV, sembrado",0.397828767573972,m/s
+Correlacion STIV vs referencia,-0.03706019404115167,-
+Correlacion STIV vs PIV,0.9747285737017951,-
+Caudal,,no calculable: el dataset no da batimetria

@@ -1,0 +1,136 @@
+{
+ "variante": "dia",
+ "camara": "myoshoji",
+ "tramo": "2026-10-24T23:00",
+ "inicio_jst": "2026-10-24T22:59:57+09:00",
+ "modos": [
+  "dia"
+ ],
+ "n_medidas": 121,
+ "aceptadas": 215,
+ "mediana": 0.08450995361234151,
+ "estaciones": [
+  {
+   "estacion": 0,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "sin_textura": 121
+   }
+  },
+  {
+   "estacion": 1,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "ambiguo": 72,
+    "sin_textura": 49
+   }
+  },
+  {
+   "estacion": 2,
+   "n": 121,
+   "aceptadas": 6,
+   "v": 0.08750214393742387,
+   "q25": 0.07865318258283131,
+   "q75": 0.09231274824618241,
+   "coh": 0.5600335630613417,
+   "escalas": "l",
+   "motivos": {
+    "sin_textura": 91,
+    "ambiguo": 24
+   }
+  },
+  {
+   "estacion": 3,
+   "n": 121,
+   "aceptadas": 81,
+   "v": 0.09184051606084839,
+   "q25": 0.08841370343566039,
+   "q75": 0.09428167002305873,
+   "coh": 0.5362898447613157,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 40
+   }
+  },
+  {
+   "estacion": 4,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 5,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 121
+   }
+  },
+  {
+   "estacion": 6,
+   "n": 121,
+   "aceptadas": 0,
+   "v": NaN,
+   "q25": NaN,
+   "q75": NaN,
+   "coh": NaN,
+   "escalas": "",
+   "motivos": {
+    "v_max": 112,
+    "ambiguo": 9
+   }
+  },
+  {
+   "estacion": 7,
+   "n": 121,
+   "aceptadas": 75,
+   "v": 0.05511158446740191,
+   "q25": 0.05434367965515245,
+   "q75": 0.08786826588711127,
+   "coh": 0.6257648484187874,
+   "escalas": "l",
+   "motivos": {
+    "ambiguo": 46
+   }
+  },
+  {
+   "estacion": 8,
+   "n": 121,
+   "aceptadas": 53,
+   "v": 0.06756593546053473,
+   "q25": 0.06377323881285453,
+   "q75": 0.07228385596734171,
+   "coh": 0.45607489512670496,
+   "escalas": "l",
+   "motivos": {
+    "sin_textura": 67,
+    "ambiguo": 1
+   }
+  }
+ ],
+ "segundos_proceso": 302
+}

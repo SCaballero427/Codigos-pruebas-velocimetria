@@ -1,0 +1,9 @@
+concepto,valor,unidad
+Caudal (este notebook),1.4484265662462377,m3/s
+Caudal aforo FlowTracker,1.4362,m3/s
+Diferencia,0.8513136224925333,%
+Verticales medidas,9.0,de 11
+Verticales rellenadas,2.0,de 11
+Sesgo frente al ADV (verticales medidas),-0.003471545743956978,m/s
+v_corr usado,0.92,-
+v_corr implicito segun el ADV,0.9238918694871988,-

@@ -51,13 +51,14 @@ coherencia no dependen de ellas; los m/s si, linealmente en el sentido del flujo
 import argparse
 import csv
 import json
+import math
 import os
 import queue
 import sys
 import threading
 import time
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 
 def _asegurar_librerias():
@@ -92,6 +93,8 @@ import numpy as np  # noqa: E402
 #   ancho publicado de ninguno de los dos cauces en esos puntos; se busco).
 # v_esperada: solo fija DS (estelas a 45 grados); sale de una correlacion de conjunto en el directo.
 # ancho_banda_m: ~2/3 del espaciado entre estaciones.
+# lat, lon: de la camara (ficha del sistema de Tokio, 水防災総合情報システム); con ellas la noche se
+#   decide tambien por la altura del sol (ver SOL_NOCHE). Una camara sin coordenadas usa solo la imagen.
 CAMARAS = {
     "myoshoji": {
         "url": "https://www.youtube.com/watch?v=huAp4q7lxiQ",
@@ -109,6 +112,7 @@ CAMARAS = {
         # pasan las burbujas junto al muro derecho
         "v_esperada": 0.30, "largo_linea_m": 9.0, "centro_linea": 0.50, "ancho_banda_m": 0.60,
         "fps_camara": 15.0, "filtro_direccional": False,
+        "lat": 35.717503, "lon": 139.678833,
         # De noche esta camara no ve el agua que fluye (verificacion_nivel/, 2026-10-14): sigue en
         # color con las farolas y lo unico visible en el agua son destellos de las farolas sobre
         # ondulaciones casi fijas (las piedras del fondo), que avanzan a 0.04-0.07 m/s. El modo noche,
@@ -126,6 +130,7 @@ CAMARAS = {
         "largo_m": 15.0, "ancho_m": 6.0,
         "v_esperada": 0.40, "largo_linea_m": 8.0, "centro_linea": 0.50, "ancho_banda_m": 0.30,
         "fps_camara": 15.0, "filtro_direccional": False,
+        "lat": 35.760283, "lon": 139.510417,
     },
     "shimoda": {
         "url": "https://www.youtube.com/watch?v=bpL7MAbdoI8",
@@ -148,6 +153,13 @@ CAMARAS = {
         # filtro: 156-162, casi siempre 9/9, mediana 0.94-1.00 m/s con DS de 2, 3 y 4 px (no sigue
         # al muestreo, luego no es un artefacto del filtro).
         "fps_camara": 15.0, "filtro_direccional": True,
+        "lat": 35.763361, "lon": 139.529694,
+        # De noche (2026-10-24/25, noche_24h/) la farola solo ilumina una franja y lo que se ve son sus
+        # destellos sobre las ondas grandes, que avanzan mas despacio que el agua: el 100 % de las
+        # estaciones se aceptaba a un 25-45 % menos que de dia al mismo nivel, y casi igual toda la noche
+        # aunque el caudal cambiaba un 35 %. Con el proceso de dia, sin reflejos o con otra actividad,
+        # igual (-15 a -25 %). Al amanecer, con el caudal constante, -25 % con el sol a -6 grados.
+        "medir_noche": False,
     },
     "akigawa": {
         "url": "https://www.youtube.com/watch?v=ZRUh9gNk8-g",
@@ -166,6 +178,7 @@ CAMARAS = {
         "largo_m": 30.0, "ancho_m": 12.0,
         "v_esperada": 1.0, "largo_linea_m": 26.0, "centro_linea": 0.50, "ancho_banda_m": 0.80,
         "fps_camara": 15.0, "filtro_direccional": False,
+        "lat": 35.729861, "lon": 139.228083,
     },
 }
 # Plantilla para una camara que no esta en la lista (--camara <nombre nuevo>). El cuadrilatero es un
@@ -178,7 +191,7 @@ CAMARA_NUEVA = {
     "cuadrilatero": [[340, 620], [340, 260], [940, 260], [940, 620]],
     "largo_m": 10.0, "ancho_m": 6.0,
     "v_esperada": 0.50, "largo_linea_m": 6.0, "centro_linea": 0.50, "ancho_banda_m": 0.40,
-    "fps_camara": None, "filtro_direccional": False, "medir_noche": True,
+    "fps_camara": None, "filtro_direccional": False, "medir_noche": True, "lat": None, "lon": None,
 }
 CAMARA_POR_DEFECTO = "myoshoji"
 ALTURA_MAX = 720            # mejor formato de estos directos; 1080 no existe en este canal
@@ -260,9 +273,35 @@ SATURACION_NOCHE = 1.5
 # (2026-10-14). Medido: de dia 66-126 en todas las grabaciones, atardecer aun valido 59, noche en
 # color 37-45, infrarrojo 14.
 BRILLO_NOCHE = 50.0
+# ... o si el sol esta por debajo de esto (grados), con las coordenadas de la camara y la hora del
+# fotograma. La imagen sola no basta (2026-10-24/25, grabacion de 24 h): el Myoshoji paso la noche EN
+# COLOR con brillo 83-86 y el Akigawa con focos sobre el rio (brillo 65-72, saturacion 45-54); las dos
+# se tomaban por dia y el Myoshoji aceptaba destellos de farola a 0.05-0.10 m/s, con 0.45-0.55 de dia
+# al mismo nivel. 0 (puesta/salida del sol) y no -6 (crepusculo civil): al amanecer del 24, con el
+# caudal constante, el Shimoda medio en el centro -25 % (sol a -6), -22 % (-4), -10 % (-1) y -8 % (+2)
+# respecto al sol a +5; la imagen ya daba "dia" a las 05:40 (-22 %). Ver noche_24h/README.md.
+SOL_NOCHE = 0.0
 
 
-def es_noche(geom, frame):
+def altura_sol(cuando, lat, lon):
+    """Altura del sol en grados (formulas de la NOAA; ~0.1 grados, de sobra para separar dia y noche).
+    Comprobado en Tokio el 2026-10-24: puesta a las 16:52 JST y salida a las 05:56 (tablas: 16:52, 05:58)."""
+    t = cuando.astimezone(timezone.utc)
+    g = 2 * math.pi / 365 * (t.timetuple().tm_yday - 1 + (t.hour - 12 + t.minute / 60 + t.second / 3600) / 24)
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+            + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    ecuacion = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                         - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    angulo = math.radians((t.hour * 60 + t.minute + t.second / 60 + ecuacion + 4 * lon) / 4 - 180)
+    la = math.radians(lat)
+    return math.degrees(math.asin(math.sin(la) * math.sin(decl) + math.cos(la) * math.cos(decl) * math.cos(angulo)))
+
+
+def es_noche(geom, frame, cuando=None):
+    """Noche si la imagen lo dice (infrarrojo u oscura) o, con `cuando` (hora del fotograma, con zona) y
+    las coordenadas de la camara, si el sol esta por debajo de SOL_NOCHE."""
+    if cuando is not None and LAT is not None and LON is not None and altura_sol(cuando, LAT, LON) < SOL_NOCHE:
+        return True
     return (geom.saturacion(frame) < SATURACION_NOCHE
             or float(np.median(geom.brillo(frame))) < BRILLO_NOCHE)
 
@@ -277,7 +316,7 @@ def elegir_camara(nombre, fuente=None, ajustes=None):
     """
     global CAMARA, URL_FUENTE, ETIQUETA, CUADRILATERO_SEMILLA, LARGO_SEMILLA_M, ANCHO_SEMILLA_M
     global V_ESPERADA, LARGO_LINEA_M, CENTRO_LINEA, ANCHO_BANDA_M, V_MAX_FISICA, FPS_CAMARA
-    global FILTRO_DIRECCIONAL, MEDIR_NOCHE
+    global FILTRO_DIRECCIONAL, MEDIR_NOCHE, LAT, LON
     global CARPETA_SALIDAS, ARCHIVO_CONFIG, ARCHIVO_CSV, ARCHIVO_VISTA
     CARPETA_SALIDAS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salidas", nombre)
     ARCHIVO_CONFIG = os.path.join(CARPETA_SALIDAS, "config_stiv_directo.json")
@@ -311,6 +350,7 @@ def elegir_camara(nombre, fuente=None, ajustes=None):
     FPS_CAMARA = c["fps_camara"]
     FILTRO_DIRECCIONAL = bool(c.get("filtro_direccional"))
     MEDIR_NOCHE = bool(c.get("medir_noche", True))
+    LAT, LON = c.get("lat"), c.get("lon")
     V_MAX_FISICA = 3 * V_ESPERADA
 
 
@@ -1548,6 +1588,11 @@ def main():
                     help="con --archivo: reproducirlo a su velocidad real, como si fuera un directo")
     ap.add_argument("--bucle", action="store_true",
                     help="con --archivo: volver a empezar al acabar (demostracion continua)")
+    ap.add_argument("--hora-inicio", metavar="AAAA-MM-DDTHH:MM:SS+09:00",
+                    help="con --archivo: hora real del primer fotograma de la grabacion. El CSV lleva "
+                         "entonces la hora de la grabacion (inicio + PTS) en vez de la del PC, y la noche "
+                         "se decide tambien por el sol a esa hora")
+    ap.add_argument("--csv", help="escribir las medidas en este CSV en vez de salidas/<camara>/medidas_directo.csv")
     args = ap.parse_args()
     args.ajustes, args.titulo = None, None
     args.visor = None
@@ -1642,12 +1687,20 @@ def ejecutar(args, fuentes, actual):
         print("aviso: DS < 0.2 px de imagen, el STI estaria submuestreado (aliasing)", file=sys.stderr)
 
     os.makedirs(CARPETA_SALIDAS, exist_ok=True)
+    destino = getattr(args, "csv", None) or ARCHIVO_CSV
+    # una grabacion "como en directo": su hora real sale del PTS, que en las .ts de YouTube sigue al
+    # reloj (los huecos de la grabacion son saltos de PTS)
+    hora_inicio = getattr(args, "hora_inicio", None)
+    if hora_inicio:
+        hora_inicio = datetime.fromisoformat(hora_inicio)
+        if hora_inicio.tzinfo is None:
+            hora_inicio = hora_inicio.astimezone()      # sin zona: la del PC
     cabecera = ["hora_local", "t_flujo_s", "estacion", "y_m", "v_m_s", "coherencia", "bloques_activos",
                 "aceptada", "motivos", "escala_verificada", "s_por_fila", "modo"]
     # si el CSV esta abierto en otro programa (Excel lo bloquea en Windows) no se puede apartar ni
     # escribir: entonces se escribe en uno nuevo con fecha en vez de abortar
-    archivo_csv = ARCHIVO_CSV
-    alternativo = ARCHIVO_CSV[:-4] + datetime.now().strftime("_%Y%m%d_%H%M%S.csv")
+    archivo_csv = destino
+    alternativo = destino[:-4] + datetime.now().strftime("_%Y%m%d_%H%M%S.csv")
     if os.path.exists(archivo_csv):
         try:
             with open(archivo_csv, encoding="utf-8") as f:
@@ -1656,7 +1709,7 @@ def ejecutar(args, fuentes, actual):
             archivo_csv, antiguo = alternativo, False
         if antiguo:
             # CSV de una version anterior con otras columnas: se aparta en vez de mezclar
-            viejo = ARCHIVO_CSV[:-4] + datetime.now().strftime("_hasta_%Y%m%d_%H%M%S.csv")
+            viejo = destino[:-4] + datetime.now().strftime("_hasta_%Y%m%d_%H%M%S.csv")
             try:
                 os.replace(archivo_csv, viejo)
                 print(f"CSV con columnas antiguas apartado en {os.path.basename(viejo)}")
@@ -1668,8 +1721,8 @@ def ejecutar(args, fuentes, actual):
     except PermissionError:
         archivo_csv, nuevo = alternativo, True
         fcsv = open(archivo_csv, "a", newline="", encoding="utf-8")
-    if archivo_csv != ARCHIVO_CSV:
-        print(f"aviso: {os.path.basename(ARCHIVO_CSV)} esta abierto en otro programa (Excel?); "
+    if archivo_csv != destino:
+        print(f"aviso: {os.path.basename(destino)} esta abierto en otro programa (Excel?); "
               f"las medidas van a {os.path.basename(archivo_csv)}", file=sys.stderr)
     wcsv = csv.writer(fcsv)
     if nuevo:
@@ -1686,6 +1739,14 @@ def ejecutar(args, fuentes, actual):
     gen = 0                 # cambia cada vez que el buffer deja de ser continuo; descarta medidas viejas
     pts_prev, t_ult_medida, res = None, -1e9, None
     t_ini_flujo, reloj_ini, t = None, None, 0.0
+    pts_primero = None      # PTS del primer fotograma: con --hora-inicio, hora = inicio + (pts - pts_primero)
+
+    def hora_de(pts):
+        """Hora real del fotograma: la del PC en directo, la de la grabacion con --hora-inicio, o None
+        (un archivo sin --hora-inicio: la noche se decide solo por la imagen)."""
+        if hora_inicio is not None:
+            return hora_inicio + timedelta(seconds=pts - pts_primero)
+        return None if args.archivo else datetime.now(timezone.utc)
     reanclar = False        # tras una discontinuidad, el reloj del flujo se re-ancla para que t siga creciendo
     n_fotogramas, coste_proceso = 0, 0.0
     t_ult_vista, reloj_arranque = 0.0, time.time()
@@ -1773,10 +1834,12 @@ def ejecutar(args, fuentes, actual):
             n_fotogramas += 1
             if t_ini_flujo is None:
                 t_ini_flujo, reloj_ini = pts, time.time()
+            if pts_primero is None:
+                pts_primero = pts
             # modo noche/dia
             if args.modo == "auto" and (modo is None or t - t_ult_modo >= 5.0):
                 t_ult_modo = t
-                visto = "noche" if es_noche(geom, frame) else "dia"
+                visto = "noche" if es_noche(geom, frame, hora_de(pts)) else "dia"
                 if modo is None:
                     modo = visto
                     print(f"modo {modo} (saturacion {geom.saturacion(frame):.1f})")
@@ -1823,7 +1886,9 @@ def ejecutar(args, fuentes, actual):
                 if g_m != gen:
                     continue
                 res = res_m
-                hora = datetime.now().isoformat(timespec="seconds")
+                # mismo gen: t_ini_flujo no ha cambiado desde la medida, asi que su PTS es t_m + t_ini_flujo
+                hora = (hora_de(t_m + t_ini_flujo) if hora_inicio is not None else datetime.now()
+                        ).isoformat(timespec="seconds")
                 for r in res:
                     wcsv.writerow([hora, f"{t_m:.2f}", r["estacion"], f"{r['y_m']:.3f}", f"{r['v']:.4f}",
                                    f"{r['coherencia']:.3f}", r["bloques_activos"], int(r["aceptada"]),
