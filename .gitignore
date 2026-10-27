@@ -1,3 +1,41 @@
+# El repositorio lleva SOLO los casos (casos/01 a 10) y lo imprescindible para ejecutarlos: las
+# entradas que leen, las herramientas que usan y el entorno. Todo lo demas de la carpeta de trabajo
+# (docs/, archivo/, tutoriales/, informes, presentaciones...) se queda en el equipo. Por eso se
+# ignora todo y se readmite lo que hace falta.
+/*
+!/.gitignore
+!/README.md
+!/requirements_pyorc.txt
+!/casos/
+!/datos/
+!/herramientas/
+
+# datos/: solo los archivos que abren los casos
+/datos/*
+!/datos/ngwerere/
+/datos/ngwerere/*
+!/datos/ngwerere/ngwerere_20191103.mp4
+!/datos/ngwerere/ngwerere_cross_section.csv
+!/datos/USGS/
+/datos/USGS/*
+!/datos/USGS/Station_Stage_SileCanal.csv
+!/datos/USGS/SMC_PIV_results.mat
+!/datos/USGS/link.txt
+!/datos/canal_riego/
+# Datasets descargados (46 GB): ver datos/externos/LEEME.md
+!/datos/externos/
+/datos/externos/*
+!/datos/externos/LEEME.md
+
+# herramientas/: solo lo que usan los casos
+/herramientas/*
+!/herramientas/LEEME.md
+!/herramientas/estabilizar_video.py
+!/herramientas/estabilizar_stiv.py
+!/herramientas/ffmpeg/
+/herramientas/ffmpeg/*
+!/herramientas/ffmpeg/ffmpeg.exe
+
 # Basura que Python, Jupyter y el sistema regeneran solos
 __pycache__/
 *.pyc
@@ -7,12 +45,7 @@ desktop.ini
 ~$*
 
 # Entornos de Python: se rehacen con requirements_pyorc.txt o con arrancar.bat
-entorno_pyorc/
 .venv/
-
-# Datasets descargados (46 GB): ver datos/externos/LEEME.md
-/datos/externos/*
-!/datos/externos/LEEME.md
 
 # Grabaciones FFV1 de los directos (1-4 GB cada una, por encima del limite de GitHub)
 /casos/09_directo_tokio/validacion/grabaciones/
@@ -32,18 +65,10 @@ cookies*.txt
 *.gif
 !/datos/ngwerere/ngwerere_20191103.mp4
 !/datos/canal_riego/*.mp4
-!/casos/09_directo_tokio/raspberry/prueba/*.mp4
-
-# Clon de la libreria pyorc: es otro repositorio (https://github.com/localdevices/pyorc), ver referencias/LEEME.md
-/referencias/pyorc_repo/
-
-# Binarios de RIVeR (se descargan con la aplicacion) y restos de pruebas
-/pendientes/RIVeR-STIV_1.0/*.exe
-/archivo/*.npy
+!/casos/09_directo_tokio/prueba/*.mp4
 
 # Fotogramas extraidos del video para RIVeR (se regeneran desde el video; los resultados .txt si van)
 /casos/02_smc_pyorc/entradas/**/SMC_estabilizado_previsualizacion_*.jpg
-/pendientes/RIVeR-STIV_1.0/RIVeR_Example/GOPR3225_Trim_*.jpg
 
 # Clips de la campana de 24 h (segmentos .ts del directo, 1.8 GB): se rehacen con noche_24h/tramo.py
 /casos/09_directo_tokio/noche_24h/clips/

@@ -1,7 +1,0 @@
-concepto,valor,unidad
-Velocidad superficial mediana (STIV),0.7428177838448032,m/s
-Verticales de validacion medidas,5.0,de 7
-Sesgo medio relativo,-3.4999568994930392,%
-RMSE,0.10475238161626681,m/s
-Correlacion r,0.9944439690909487,-
-Caudal,,no calculable: el dataset no da batimetria

@@ -1,6 +1,6 @@
 """Graba N segundos del directo de una camara en grabaciones/<nombre>.avi (FFV1, sin perdidas), para
 la regresion. python grabar.py <camara> <segundos> [nombre]. Sin perdidas a proposito: recodificar con
-perdidas mete ruido que pasa ACTIVIDAD_MIN (lo que le pasa a raspberry/prueba/myoshoji_20s.mp4)."""
+perdidas mete ruido que pasa ACTIVIDAD_MIN (lo que le pasa a prueba/myoshoji_20s.mp4)."""
 import os, sys, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))

@@ -67,22 +67,21 @@ Sin `fuentes.json` (p. ej. en la Raspberry, adonde no viaja) la lista son las ca
 - `--web PUERTO` sirve el directo anotado (MJPEG) y las metricas de rendimiento y del equipo (fps,
   cola, ms por fotograma y por medida, CPU, RAM, temperatura, frenado) a cualquier navegador de la red;
   `--tiempo-real --bucle` reproduce un `--archivo` a su velocidad y sin fin, como un directo. Son para
-  ver una Raspberry sin pantalla (ver [raspberry/LEEME.md](raspberry/LEEME.md), paso 6).
+  ver una Raspberry sin pantalla (ver [../10_raspberry_pi/README.md](../10_raspberry_pi/README.md), paso 6).
 - Si YouTube responde "Sign in to confirm you're not a bot" (le paso a este PC el 2026-10-12),
   `STIV_COOKIES=ruta\cookies.txt` le pasa a yt-dlp las cookies de un navegador con sesion.
 
 ## Raspberry Pi
 
-`raspberry/` tiene todo para ejecutarlo en una **Raspberry Pi 4B** sin pantalla y que arranque solo
-al encenderse: `subir_a_raspberry.bat` (en el PC) lo copia e instala, `stiv.sh` lo maneja en la Pi,
-y trae un video de prueba de 20 s para probar sin camara ni internet. Instrucciones paso a paso, y
-lo que se probo y lo que no, en [raspberry/LEEME.md](raspberry/LEEME.md).
+Lo necesario para ejecutarlo en una **Raspberry Pi 4B** sin pantalla y que arranque solo al
+encenderse esta aparte, en el caso 10: [`../10_raspberry_pi/`](../10_raspberry_pi/README.md).
+`subir_a_raspberry.bat` (en el PC) copia a la Pi `stiv_directo.py`, las configs de camara de
+`salidas/` y los videos de `prueba/` de esta carpeta, y lo instala; `stiv.sh` lo maneja en la Pi.
+Alli estan tambien las instrucciones paso a paso, lo que se probo y lo que no, el banco de pruebas
+sin hardware (`pruebas_docker/`) y lo medido en la Pi real (`salidas_raspberry/`).
 
-`pruebas_docker/` es el banco de pruebas con el que se probo ese paquete sin hardware: una
-Raspberry Pi falsa (Debian 13 arm64 emulado, con systemd y SSH) y una camara RTSP simulada que emite
-el video de prueba. `probar_en_docker.bat` lo levanta, instala el paquete con el mismo
-`subir_a_raspberry.ps1` y ejecuta la prueba. Ver [pruebas_docker/LEEME.md](pruebas_docker/LEEME.md).
-Esta fuera de `raspberry/` a proposito: todo lo de `raspberry/` viaja a la Pi.
+`prueba/` tiene los dos videos de prueba del Myoshoji (20 s de dia y 90 s de noche) para probar sin
+camara ni internet; los usan `fuentes.json`, la regresion de `validacion/` y la Pi.
 
 La carpeta tiene su **propio entorno** `.venv` (numpy, opencv-python, yt-dlp; `requirements.txt`),
 porque `pyorc_env` de la raiz esta incompleto en este equipo (no tiene `Scripts\`). Si `.venv` no
@@ -258,7 +257,7 @@ de la seccion 0.056-0.067 m/s**, estable entre medidas, casi todas en la escala 
 izquierda, mas oscura, pocas motas) salen sin textura. La medida cuesta ~0.3 s en el PC (antes
 0.14): hay que calcular hasta tres escalas.
 
-`raspberry/prueba/myoshoji_noche_90s.mp4` es esa noche grabada (recodificada), para probar el
+`prueba/myoshoji_noche_90s.mp4` es esa noche grabada (recodificada), para probar el
 modo noche sin directo: `stiv.sh prueba-noche` en la Pi o `--archivo` en el PC.
 
 ## Fotogramas duplicados, burbujas junto al muro y el Shimoda (2026-10-13, tarde)

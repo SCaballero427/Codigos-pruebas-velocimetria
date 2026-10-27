@@ -125,5 +125,5 @@ De dia el programa hace exactamente lo mismo que antes; los cambios estan todos 
 guarda `salidas/reg_<caso>.json`. Para comprobar un cambio del metodo: correrlo antes y despues y
 comparar. Los casos estan en `regresion_casos.py`. Las grabaciones (FFV1, 1-4 GB) estan en
 `grabaciones/`, **fuera de git**; se rehacen con `grabar.py <camara> <segundos> [nombre]`. Los dos clips
-de `raspberry/prueba/` si estan en el repositorio. Una grabacion nueva no reproduce los numeros de
+de `prueba/` si estan en el repositorio. Una grabacion nueva no reproduce los numeros de
 arriba (es otro momento del rio): sirve para comparar antes/despues, no contra esta tabla.

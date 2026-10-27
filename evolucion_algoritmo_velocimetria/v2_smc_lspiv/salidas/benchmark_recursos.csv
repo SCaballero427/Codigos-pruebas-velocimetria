@@ -1,7 +1,0 @@
-etapa,segundos,cpu_s,nucleos,ram_pico_mb,ram_neta_mb,n_frames,pct_tiempo
-Parte 4: abrir video y get_frames,71.62,352.39,4.92,1327.2,132.8,250,24.5
-Parte 4: normalize + project,87.89,964.73,10.98,8951.4,107.2,250,30.0
-Parte 4: get_piv,129.14,1318.17,10.21,14044.5,1115.3,250,44.1
-Parte 4: to_netcdf,0.32,0.3,0.93,1978.4,-0.4,250,0.1
-Parte 4b: mascaras de filtrado,0.51,0.52,1.0,1137.9,16.0,250,0.2
-Parte 5: get_transect + get_q,3.21,3.16,0.98,1311.0,0.8,250,1.1

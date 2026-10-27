@@ -21,7 +21,7 @@ con el tensor de estructura. pyorc no se importa en ningun momento.
                                               # su config y sus salidas van a salidas/sitio1/
 
 En una Raspberry Pi (sin pantalla): --sin-ventana, y --vista-cada 30 para tener la imagen anotada
-al dia en salidas/<camara>/ultima_vista.png. Ver raspberry/LEEME.md.
+al dia en salidas/<camara>/ultima_vista.png. Ver ../10_raspberry_pi/README.md.
     --web 8080           el directo anotado y las metricas (fps, cola, CPU, RAM, temperatura, frenado)
                          en el navegador de cualquier equipo de la red: http://raspberrypi.local:8080
     --tiempo-real --bucle  un video grabado a su velocidad real y sin fin, como si fuera un directo
